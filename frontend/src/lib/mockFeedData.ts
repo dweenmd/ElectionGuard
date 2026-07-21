@@ -1,0 +1,86 @@
+import { FeedComment, FeedPost } from "@/types/feed";
+
+// লগইন করা ব্যবহারকারীরা (AuthContext দেখুন): voter ও candidate দুজনেই "dhaka-10"।
+// c4 (সালমান হক) "dhaka-5" এর প্রার্থী -- তার পোস্ট dhaka-10 এর voter কখনো দেখবে না,
+// এইটাই মূল visibility rule যাচাই করার জন্য ইচ্ছাকৃতভাবে রাখা হয়েছে।
+
+export const seedPosts: FeedPost[] = [
+  {
+    id: "notice-1",
+    type: "EC_NOTICE",
+    author: { id: "A123", name: "Election Commission", role: "admin" },
+    title: "ভোটগ্রহণের সময়সূচি প্রকাশ",
+    body: "আগামী ২৮ নভেম্বর সকাল ৮টা থেকে বিকাল ৪টা পর্যন্ত সকল কেন্দ্রে ভোটগ্রহণ চলবে। ভোটার আইডি কার্ড ও এনআইডি সঙ্গে আনা বাধ্যতামূলক।",
+    pinned: true,
+    status: "PUBLISHED",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+    likedBy: [],
+    reportCount: 0,
+  },
+  {
+    id: "notice-2",
+    type: "EC_NOTICE",
+    author: { id: "A123", name: "Election Commission", role: "admin" },
+    title: "আচরণবিধি স্মারক",
+    body: "সকল প্রার্থীকে ডিজিটাল ক্যাম্পেইন গাইডলাইন ২০২৬ মেনে চলার জন্য অনুরোধ করা হচ্ছে। বিধি লঙ্ঘনের অভিযোগ পেলে প্রার্থিতা বাতিল হতে পারে।",
+    pinned: false,
+    status: "PUBLISHED",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 30).toISOString(),
+    likedBy: [],
+    reportCount: 0,
+  },
+  {
+    id: "post-1",
+    type: "CANDIDATE_POST",
+    author: { id: "C456", name: "আনিসুর রহমান", role: "candidate", party: "প্রগতিশীল দল", constituencyName: "Dhaka-10" },
+    constituencyId: "dhaka-10",
+    constituencyName: "Dhaka-10",
+    title: "ধানমন্ডি ৩২ নাম্বারে জনসভা",
+    body: "আগামীকাল বিকাল ৩ টায় ধানমন্ডি ৩২ নাম্বারে এক বিশাল জনসভার আয়োজন করা হয়েছে। এলাকাবাসী সবাইকে উপস্থিত থাকার আহ্বান জানাচ্ছি।",
+    pinned: false,
+    status: "PUBLISHED",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+    likedBy: [],
+    reportCount: 0,
+  },
+  {
+    id: "post-2",
+    type: "CANDIDATE_POST",
+    author: { id: "C002", name: "বেগম রোকসানা", role: "candidate", party: "পরিবেশবাদী জোট", constituencyName: "Dhaka-10" },
+    constituencyId: "dhaka-10",
+    constituencyName: "Dhaka-10",
+    title: "কলাবাগান এলাকায় গণসংযোগ",
+    body: "আজ সারাদিন কলাবাগান এলাকার সাধারণ মানুষের সাথে গণসংযোগ করেছি। তাদের অভাব অভিযোগ শুনেছি, দ্রুত সমাধানের প্রতিশ্রুতি দিচ্ছি।",
+    pinned: false,
+    status: "PUBLISHED",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    likedBy: [],
+    reportCount: 0,
+  },
+  {
+    id: "post-3-other-area",
+    type: "CANDIDATE_POST",
+    author: { id: "C004", name: "সালমান হক", role: "candidate", party: "গণতান্ত্রিক ফ্রন্ট", constituencyName: "Dhaka-5" },
+    constituencyId: "dhaka-5",
+    constituencyName: "Dhaka-5",
+    title: "মিরপুর ১০ এ পথসভা",
+    body: "মিরপুর ১০ নাম্বার গোলচত্বরে আজকের পথসভা সফল হয়েছে। ধন্যবাদ সকলকে। (এই পোস্টটি শুধু Dhaka-5 এর ভোটাররা দেখবে -- Dhaka-10 থেকে লগইন করে টেস্ট করুন এটা ফিডে আসে না)",
+    pinned: false,
+    status: "PUBLISHED",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 10).toISOString(),
+    likedBy: [],
+    reportCount: 0,
+  },
+];
+
+export const seedComments: FeedComment[] = [
+  {
+    id: "c-1",
+    postId: "post-1",
+    author: { id: "V789", name: "রহিম উদ্দিন", role: "voter" },
+    body: "ইনশাআল্লাহ থাকব। ধন্যবাদ জানানোর জন্য।",
+    createdAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+    status: "VISIBLE",
+    reportCount: 0,
+  },
+];

@@ -1,0 +1,195 @@
+@import "tailwindcss";
+
+:root {
+  /* Civic Integrity UI - Full Material You Color Palette */
+  --background: #f9faf5;
+  --foreground: #1a1c1a;
+  --surface: #f9faf5;
+  --primary: #000000;
+  --primary-content: #ffffff;
+  --primary-container: #0f1c2c;
+  --primary-container-content: #778598;
+  --primary-fixed: #d6e4f9;
+  --primary-fixed-dim: #bac8dc;
+  --secondary: #47607e;
+  --secondary-container: #c2dcff;
+  --secondary-content: #ffffff;
+  --secondary-fixed: #d1e4ff;
+  --secondary-fixed-dim: #afc9ea;
+  --tertiary: #000000;
+  --tertiary-container: #031d34;
+  --tertiary-fixed: #d1e4ff;
+  --success: #2e7d32;
+  --success-content: #ffffff;
+  --error: #ba1a1a;
+  --error-content: #ffffff;
+  --error-container: #ffdad6;
+  --outline: #74777d;
+  --outline-variant: #c4c6cc;
+  --surface-container: #edeeea;
+  --surface-container-low: #f3f4f0;
+  --surface-container-high: #e8e8e4;
+  --surface-container-highest: #e2e3df;
+  --surface-container-lowest: #ffffff;
+  --surface-variant: #e2e3df;
+  --surface-dim: #d9dad6;
+  --surface-bright: #f9faf5;
+  --surface-tint: #525f71;
+  --on-surface: #1a1c1a;
+  --on-surface-variant: #44474c;
+  --on-background: #1a1c1a;
+  --on-primary: #ffffff;
+  --on-primary-container: #778598;
+  --on-primary-fixed: #0f1c2c;
+  --on-primary-fixed-variant: #3a4859;
+  --on-secondary: #ffffff;
+  --on-secondary-container: #48617e;
+  --on-secondary-fixed: #001d36;
+  --on-secondary-fixed-variant: #2f4865;
+  --on-tertiary: #ffffff;
+  --on-tertiary-container: #7086a1;
+  --on-tertiary-fixed: #031d34;
+  --on-tertiary-fixed-variant: #334861;
+  --on-error: #ffffff;
+  --on-error-container: #93000a;
+  --inverse-surface: #2f312e;
+  --inverse-on-surface: #f0f1ed;
+  --inverse-primary: #bac8dc;
+}
+
+.dark {
+  --background: #121212;
+  --foreground: #f5f5f5;
+  --surface: #121212;
+  --primary: #ffffff;
+  --primary-content: #000000;
+  --primary-container: #2c2c2c;
+  --primary-container-content: #ffffff;
+  
+  --secondary: #a3b8cc;
+  --secondary-container: #2a3a4c;
+  --secondary-content: #000000;
+  
+  --tertiary: #e0e0e0;
+  --tertiary-container: #333333;
+  
+  --success: #81c784;
+  --error: #e57373;
+  
+  --surface-container-highest: #333333;
+  --surface-container-high: #2b2b2b;
+  --surface-container: #242424;
+  --surface-container-low: #1d1d1d;
+  --surface-container-lowest: #121212;
+  
+  --surface-variant: #333333;
+  --on-surface: #f5f5f5;
+  --on-surface-variant: #b0b0b0;
+  --on-background: #f5f5f5;
+  --on-primary: #000000;
+  --on-secondary: #000000;
+  --on-tertiary: #000000;
+  
+  --outline: #757575;
+  --outline-variant: #333333;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-primary: var(--primary);
+  --color-primary-content: var(--primary-content);
+  --color-primary-container: var(--primary-container);
+  --color-primary-container-content: var(--primary-container-content);
+  --color-primary-fixed: var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-secondary-content: var(--secondary-content);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-tertiary-fixed: var(--tertiary-fixed);
+  --color-success: var(--success);
+  --color-success-content: var(--success-content);
+  --color-error: var(--error);
+  --color-error-content: var(--error-content);
+  --color-error-container: var(--error-container);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-variant: var(--surface-variant);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-tint: var(--surface-tint);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-on-background: var(--on-background);
+  --color-on-primary: var(--on-primary);
+  --color-on-primary-container: var(--on-primary-container);
+  --color-on-primary-fixed: var(--on-primary-fixed);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
+  --color-on-secondary: var(--on-secondary);
+  --color-on-secondary-container: var(--on-secondary-container);
+  --color-on-secondary-fixed: var(--on-secondary-fixed);
+  --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+  --color-on-tertiary-fixed: var(--on-tertiary-fixed);
+  --color-on-tertiary-fixed-variant: var(--on-tertiary-fixed-variant);
+  --color-on-error: var(--on-error);
+  --color-on-error-container: var(--on-error-container);
+  --color-inverse-surface: var(--inverse-surface);
+  --color-inverse-on-surface: var(--inverse-on-surface);
+  --color-inverse-primary: var(--inverse-primary);
+  --font-sans: "Inter", Arial, Helvetica, sans-serif;
+  --font-headline: "Hanken Grotesk", Arial, sans-serif;
+
+  /* Spacing */
+  --spacing-margin-mobile: 20px;
+  --spacing-margin-desktop: 64px;
+  --spacing-gutter: 24px;
+
+  /* Radii */
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-full: 9999px;
+
+  /* Box Shadow */
+  --shadow-card: 0px 4px 12px rgba(26, 43, 75, 0.08);
+  --shadow-ambient: 0px 2px 8px rgba(26, 43, 75, 0.06);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Typography Helpers */
+.text-headline-lg { font-family: "Hanken Grotesk"; font-size: 40px; line-height: 48px; letter-spacing: -0.02em; font-weight: 700; }
+.text-headline-lg-mobile { font-family: "Hanken Grotesk"; font-size: 32px; line-height: 40px; letter-spacing: -0.02em; font-weight: 700; }
+.text-headline-md { font-family: "Hanken Grotesk"; font-size: 24px; line-height: 32px; font-weight: 600; }
+.text-body-lg { font-family: "Inter"; font-size: 18px; line-height: 28px; font-weight: 400; }
+.text-body-md { font-family: "Inter"; font-size: 16px; line-height: 24px; font-weight: 400; }
+.text-label-md { font-family: "Inter"; font-size: 14px; line-height: 20px; letter-spacing: 0.05em; font-weight: 500; }
+.text-caption { font-family: "Inter"; font-size: 12px; line-height: 16px; font-weight: 400; }
+
+/* Focus ring utility */
+.focus-ring { @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2; }
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+.material-symbols-outlined[data-weight="fill"] {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
