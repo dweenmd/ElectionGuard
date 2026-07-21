@@ -3,7 +3,7 @@ import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import { useTranslation } from "@/context/UIContext";
 
-// এই পেজটি অ্যাডমিন প্যানেলে সকল প্রার্থীদের তালিকা দেখায় এবং তাদের ডকুমেন্ট যাচাই করার সুবিধা দেয়
+// এই page অ্যাডমিন প্যানেলে সকল প্রার্থীদের তালিকা দেখায় এবং তাদের ডকুমেন্ট যাচাই করার সুবিধা দেয়
 export default function AdminCandidatesPage() {
   const { t } = useTranslation();
 
