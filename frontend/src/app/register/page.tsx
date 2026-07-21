@@ -15,15 +15,40 @@ export default function RegisterPage() {
     phone: "",
     address: ""
   });
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [step, setStep] = useState(1);
   const [isScanning, setIsScanning] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (errors[e.target.name]) setErrors((prev) => ({ ...prev, [e.target.name]: "" }));
+  };
+
+  const validateStep1 = () => {
+    const next: Record<string, string> = {};
+    if (!/^\d{10,17}$/.test(formData.nid.trim())) {
+      next.nid = t('register.errorNid');
+    }
+    if (formData.name.trim().length < 3) {
+      next.name = t('register.errorName');
+    }
+    if (!formData.dob) {
+      next.dob = t('register.errorDob');
+    } else {
+      const age = (Date.now() - new Date(formData.dob).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+      if (age < 18) next.dob = t('register.errorAge');
+      if (new Date(formData.dob) > new Date()) next.dob = t('register.errorDobFuture');
+    }
+    if (!/^01[3-9]\d{8}$/.test(formData.phone.trim())) {
+      next.phone = t('register.errorPhone');
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateStep1()) return;
     setStep(2);
   };
 
@@ -83,22 +108,26 @@ export default function RegisterPage() {
               
               <div>
                 <label className="block text-label-md font-medium text-on-surface mb-1">{t('login.nid')}</label>
-                <input required name="nid" value={formData.nid} onChange={handleChange} type="text" className="w-full bg-surface-container-lowest border border-outline rounded-lg py-2 px-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary" placeholder="e.g. 1982374012" />
+                <input required name="nid" value={formData.nid} onChange={handleChange} type="text" aria-invalid={!!errors.nid} className={`w-full bg-surface-container-lowest border rounded-lg py-2 px-3 text-body-md focus:outline-none focus:ring-2 ${errors.nid ? "border-error focus:ring-error" : "border-outline focus:ring-primary"}`} placeholder="e.g. 1982374012" />
+                {errors.nid && <p className="text-caption text-error mt-1">{errors.nid}</p>}
               </div>
               
               <div>
                 <label className="block text-label-md font-medium text-on-surface mb-1">{t('register.fullName')}</label>
-                <input required name="name" value={formData.name} onChange={handleChange} type="text" className="w-full bg-surface-container-lowest border border-outline rounded-lg py-2 px-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary" placeholder="ইলেকশন কমিশনের ডাটাবেজ অনুযায়ী" />
+                <input required name="name" value={formData.name} onChange={handleChange} type="text" aria-invalid={!!errors.name} className={`w-full bg-surface-container-lowest border rounded-lg py-2 px-3 text-body-md focus:outline-none focus:ring-2 ${errors.name ? "border-error focus:ring-error" : "border-outline focus:ring-primary"}`} placeholder="ইলেকশন কমিশনের ডাটাবেজ অনুযায়ী" />
+                {errors.name && <p className="text-caption text-error mt-1">{errors.name}</p>}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-label-md font-medium text-on-surface mb-1">{t('register.dob')}</label>
-                  <input required name="dob" value={formData.dob} onChange={handleChange} type="date" className="w-full bg-surface-container-lowest border border-outline rounded-lg py-2 px-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary" />
+                  <input required name="dob" value={formData.dob} onChange={handleChange} type="date" aria-invalid={!!errors.dob} className={`w-full bg-surface-container-lowest border rounded-lg py-2 px-3 text-body-md focus:outline-none focus:ring-2 ${errors.dob ? "border-error focus:ring-error" : "border-outline focus:ring-primary"}`} />
+                  {errors.dob && <p className="text-caption text-error mt-1">{errors.dob}</p>}
                 </div>
                 <div>
                   <label className="block text-label-md font-medium text-on-surface mb-1">{t('register.phone')}</label>
-                  <input required name="phone" value={formData.phone} onChange={handleChange} type="tel" className="w-full bg-surface-container-lowest border border-outline rounded-lg py-2 px-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary" placeholder="017XXXXXXXX" />
+                  <input required name="phone" value={formData.phone} onChange={handleChange} type="tel" aria-invalid={!!errors.phone} className={`w-full bg-surface-container-lowest border rounded-lg py-2 px-3 text-body-md focus:outline-none focus:ring-2 ${errors.phone ? "border-error focus:ring-error" : "border-outline focus:ring-primary"}`} placeholder="017XXXXXXXX" />
+                  {errors.phone && <p className="text-caption text-error mt-1">{errors.phone}</p>}
                 </div>
               </div>
 

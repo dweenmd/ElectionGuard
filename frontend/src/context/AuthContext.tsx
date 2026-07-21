@@ -19,7 +19,7 @@ interface AuthContextType {
   user: User | null;
   role: Role;
   isLoggedIn: boolean;
-  login: (role: Role) => void;
+  login: (role: Exclude<Role, null>) => void;
   logout: () => void;
   isLoading: boolean;
   isElectionStarted: boolean;
@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // voter ও candidate কে ইচ্ছাকৃতভাবে একই আসনে (Dhaka-10) রাখা হয়েছে যাতে
     // feed-এর constituency-scoped visibility ডেমোতে সরাসরি দেখা যায়।
     const mockUser: User = {
-      id: role === "admin" ? "A123" : role === "candidate" ? "C456" : "V789",
+      id: role === "admin" ? "A123" : role === "candidate" ? "C001" : "V789",
       name: role === "admin" ? "Election Officer" : role === "candidate" ? "Anisur Rahman" : "Rahim Uddin",
       role: role,
       constituencyId: role === "admin" ? "ALL" : "dhaka-10",

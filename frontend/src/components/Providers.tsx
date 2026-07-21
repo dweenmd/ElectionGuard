@@ -5,6 +5,7 @@ import { UIProvider } from "@/context/UIContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { Web3Provider } from "@/context/Web3Context";
 import { FeedProvider } from "@/context/FeedContext";
+import { GrievanceProvider } from "@/context/GrievanceContext";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -13,7 +14,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <Web3Provider>
           <UIProvider>
             <FeedProvider>
-              {children}
+              <GrievanceProvider>
+                {children}
+              </GrievanceProvider>
             </FeedProvider>
             <Toaster 
               position="bottom-right"

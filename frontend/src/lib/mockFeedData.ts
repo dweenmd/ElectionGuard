@@ -32,7 +32,7 @@ export const seedPosts: FeedPost[] = [
   {
     id: "post-1",
     type: "CANDIDATE_POST",
-    author: { id: "C456", name: "আনিসুর রহমান", role: "candidate", party: "প্রগতিশীল দল", constituencyName: "Dhaka-10" },
+    author: { id: "C001", name: "আনিসুর রহমান", role: "candidate", party: "প্রগতিশীল দল", constituencyName: "Dhaka-10" },
     constituencyId: "dhaka-10",
     constituencyName: "Dhaka-10",
     title: "ধানমন্ডি ৩২ নাম্বারে জনসভা",

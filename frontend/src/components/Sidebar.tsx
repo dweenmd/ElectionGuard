@@ -16,6 +16,7 @@ export default function Sidebar({ role: propRole }: { role?: "voter" | "candidat
     { name: t('common.dashboard'), icon: 'dashboard', path: '/voter' },
     { name: t('common.feed'), icon: 'newspaper', path: '/feed' },
     { name: t('common.vote'), icon: 'how_to_vote', path: '/vote' },
+    { name: t('common.grievance'), icon: 'report', path: '/grievance' },
     { name: t('common.uploadDocs'), icon: 'upload_file', path: '/voter/upload' },
     { name: t('common.profile'), icon: 'person', path: '/profile' },
   ];
@@ -33,6 +34,7 @@ export default function Sidebar({ role: propRole }: { role?: "voter" | "candidat
     { name: t('common.dashboard'), icon: 'dashboard', path: '/admin' },
     { name: t('common.feed'), icon: 'newspaper', path: '/feed' },
     { name: t('common.candidates'), icon: 'group', path: '/admin/candidates' },
+    { name: t('common.grievance'), icon: 'report', path: '/admin/grievances' },
     { name: t('common.results'), icon: 'bar_chart', path: '/admin/results' },
   ];
 

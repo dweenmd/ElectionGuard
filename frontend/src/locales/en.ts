@@ -10,6 +10,7 @@ export const en = {
     saveChanges: "Save Changes",
     cancel: "Cancel",
     submit: "Submit",
+    uploading: "Uploading...",
     details: "Details",
     dashboard: "Dashboard",
     profile: "Profile",
@@ -21,6 +22,7 @@ export const en = {
     secureSession: "Secure Session",
     needHelp: "Need Help?",
     feed: "Notice Board",
+    grievance: "Complaints",
     loading: "Loading..."
   },
   nav: {
@@ -56,7 +58,9 @@ export const en = {
     password: "Password",
     signIn: "Sign in",
     forgotPassword: "Forgot password?",
-    newVoter: "Don't have an account? Register"
+    newVoter: "Don't have an account? Register",
+    errorNid: "Enter a valid National ID (10-17 digits).",
+    errorPassword: "Password must be at least 6 characters."
   },
   register: {
     title: "Voter Registration",
@@ -67,14 +71,21 @@ export const en = {
     phone: "Phone Number",
     address: "Present Address",
     next: "Next Step",
-    previous: "Previous Step"
+    previous: "Previous Step",
+    errorNid: "Enter a valid National ID (10-17 digits).",
+    errorName: "Enter your full name (at least 3 characters).",
+    errorDob: "Date of birth is required.",
+    errorAge: "You must be at least 18 years old to register.",
+    errorDobFuture: "Date of birth cannot be in the future.",
+    errorPhone: "Enter a valid Bangladeshi phone number (e.g. 017XXXXXXXX)."
   },
   voterDashboard: {
     title: "Voter Dashboard",
     subtitle: "View election information and candidate manifestos for your area.",
     constituency: "Dhaka-10 (Your Area)",
     candidatesTitle: "Candidates in your area",
-    candidatesCount: "3 Candidates",
+    candidatesCountLabel: "Candidates",
+    noCandidates: "No candidates registered in your constituency yet.",
     ballotPaper: "Digital Ballot Paper",
     ballotDesc: "Cast your vote from here once the election starts.",
     viewBallot: "View Ballot",
@@ -204,15 +215,22 @@ export const en = {
     guidelineText: "Ensure all campaign posts comply with the Election Commission's Digital Campaign Guidelines 2026.",
     uploadTitle: "Nomination Document Upload",
     uploadSubtitle: "Submit necessary documents and information as per Bangladesh Election Commission (EC) rules.",
+    uploadDocsTitle: "Nomination Document Upload",
+    uploadDocsDesc2: "Submit necessary documents and information as per Bangladesh Election Commission (EC) rules.",
+    successMsg: "Documents submitted successfully.",
     sec1: "1. Original Nomination Paper & Identity",
     form: "Filled Nomination Form (with Proposer & Seconder signature)",
+    nominationForm: "Filled Nomination Form (with Proposer & Seconder signature)",
     nidCopy: "Attested NID Copy",
     photo: "Passport Size Photo (Attested)",
     sec2: "2. Educational & Party Documents",
     eduCert: "Highest Education Certificate",
+    education: "Highest Education Certificate",
     partyCert: "Party Certificate / 1% Voter List",
+    partyCertDesc: "Required only if a party-nominated candidate.",
     sec3: "3. Affidavit",
     sec3Alert: "Must be attested by a Notary Public or First Class Magistrate.",
+    notaryRequired: "Must be attested by a Notary Public or First Class Magistrate.",
     caseInfo: "Case Details, Profession & Income Source",
     wealthInfo: "Wealth, Liabilities & Past Pledges",
     sec4: "4. Financial & Banking Information",
@@ -281,5 +299,55 @@ export const en = {
     noticePublished: "Notice published",
     postPublished: "Post published",
     empty: "Nothing here yet."
+  },
+  candidateProfile: {
+    back: "Back",
+    notFound: "Candidate not found.",
+    manifesto: "Manifesto",
+    recentPosts: "Recent Posts",
+    noPosts: "This candidate hasn't posted anything yet."
+  },
+  countdown: {
+    title: "Voting starts in",
+    days: "Days",
+    hours: "Hours",
+    minutes: "Minutes",
+    seconds: "Seconds",
+    open: "Voting is open now",
+    openDesc: "Cast your vote before the polling closes.",
+    closed: "Voting has closed",
+    closedDesc: "Results will be published once counting is complete."
+  },
+  grievance: {
+    title: "File a Complaint",
+    subtitle: "Report election irregularities directly to the Election Commission.",
+    category: {
+      label: "Category",
+      MISCONDUCT: "Candidate Misconduct",
+      FRAUD: "Voting Fraud",
+      TECHNICAL: "Technical Issue",
+      HARASSMENT: "Harassment",
+      OTHER: "Other"
+    },
+    description: "Description",
+    descriptionPlaceholder: "Describe what happened, where, and when...",
+    minChars: "characters minimum",
+    errorTooShort: "Please describe the issue in at least 20 characters.",
+    submit: "Submit Complaint",
+    submitted: "Complaint submitted",
+    myComplaints: "My Complaints",
+    none: "No complaints yet.",
+    ecResponse: "EC Response",
+    adminTitle: "Complaint Management",
+    adminSubtitle: "Review and respond to voter complaints.",
+    allStatuses: "All Statuses",
+    responsePlaceholder: "Write a response (optional)...",
+    statusUpdated: "Status updated",
+    status: {
+      PENDING: "Pending",
+      REVIEWING: "Under Review",
+      RESOLVED: "Resolved",
+      REJECTED: "Rejected"
+    }
   }
 };

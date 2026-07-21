@@ -2,9 +2,19 @@
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import { useTranslation } from "@/context/UIContext";
+import { mockCandidates } from "@/lib/mockCandidates";
+import { useSimulatedLoading } from "@/hooks/useSimulatedLoading";
+import { SkeletonStatCard } from "@/components/ui/Skeleton";
 
 export default function AdminResultsPage() {
   const { t } = useTranslation();
+  const isLoading = useSimulatedLoading();
+
+  // constituency অনুযায়ী গ্রুপ করা, প্রতিটার ভেতরে ভোট অনুযায়ী sort -- ডেমো ভোট সংখ্যা
+  // mockCandidates.ts থেকে আসছে (TODO(backend): real on-chain tally দিয়ে replace হবে)
+  const totalVotes = mockCandidates.reduce((sum, c) => sum + c.voteCount, 0);
+  const totalRegistered = 1020400;
+  const constituencies = Array.from(new Set(mockCandidates.map((c) => c.constituencyId)));
 
   return (
     <div className="flex h-screen overflow-hidden w-full">
@@ -33,21 +43,68 @@ export default function AdminResultsPage() {
                   </div>
                 </div>
 
-                <div className="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[60px] opacity-50 mb-4">pending</span>
-                  <p className="text-body-lg">{t('results.resultsAfter')}</p>
-                </div>
+                {isLoading ? (
+                  <div className="flex flex-col gap-6 py-4">
+                    {constituencies.map((cid) => (
+                      <div key={cid} className="animate-pulse h-24 bg-surface-variant/40 rounded-lg" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-6">
+                    {constituencies.map((cid) => {
+                      const candidates = mockCandidates
+                        .filter((c) => c.constituencyId === cid)
+                        .sort((a, b) => b.voteCount - a.voteCount);
+                      const constituencyTotal = candidates.reduce((s, c) => s + c.voteCount, 0);
+                      return (
+                        <div key={cid} className="border border-outline-variant/60 rounded-lg p-4">
+                          <h3 className="text-label-md font-bold text-on-surface mb-3 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary text-[18px]">location_on</span>
+                            {candidates[0]?.constituencyName}
+                          </h3>
+                          <div className="flex flex-col gap-3">
+                            {candidates.map((c, idx) => {
+                              const pct = constituencyTotal > 0 ? Math.round((c.voteCount / constituencyTotal) * 100) : 0;
+                              return (
+                                <div key={c.id}>
+                                  <div className="flex justify-between items-center text-caption mb-1">
+                                    <span className={`font-bold ${idx === 0 ? "text-primary" : "text-on-surface-variant"}`}>
+                                      {t(`${c.translationKey}.name` as any)}
+                                    </span>
+                                    <span className="text-on-surface-variant">{c.voteCount.toLocaleString()} ({pct}%)</span>
+                                  </div>
+                                  <div className="w-full bg-surface-variant rounded-full h-2">
+                                    <div className={`h-2 rounded-full ${idx === 0 ? "bg-primary" : "bg-secondary"}`} style={{ width: `${pct}%` }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 text-center">
-                  <h3 className="text-label-md text-on-surface-variant mb-2">{t('results.currentVotes')}</h3>
-                  <p className="text-display-md text-primary font-bold">142,503</p>
-                </div>
-                <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 text-center">
-                  <h3 className="text-label-md text-on-surface-variant mb-2">{t('results.registeredVoters')}</h3>
-                  <p className="text-display-md text-on-surface font-bold">1,020,400</p>
-                </div>
+                {isLoading ? (
+                  <>
+                    <SkeletonStatCard />
+                    <SkeletonStatCard />
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 text-center">
+                      <h3 className="text-label-md text-on-surface-variant mb-2">{t('results.currentVotes')}</h3>
+                      <p className="text-display-md text-primary font-bold">{totalVotes.toLocaleString()}</p>
+                    </div>
+                    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 text-center">
+                      <h3 className="text-label-md text-on-surface-variant mb-2">{t('results.registeredVoters')}</h3>
+                      <p className="text-display-md text-on-surface font-bold">{totalRegistered.toLocaleString()}</p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 

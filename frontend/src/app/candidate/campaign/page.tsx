@@ -2,8 +2,17 @@
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
+import { useAuth } from "@/context/AuthContext";
+import { useTranslation } from "@/context/UIContext";
+import { getCandidateById } from "@/lib/mockCandidates";
 
 export default function CampaignPage() {
+  const { user } = useAuth();
+  const { t } = useTranslation();
+  // logged-in candidate-এর নিজের রেকর্ড mockCandidates.ts থেকে -- আগে এই পুরো টেক্সট এখানে
+  // আলাদাভাবে হার্ডকোড ছিল, voter dashboard/profile page-এর সাথে সিঙ্ক থাকতো না।
+  const myCandidate = user ? getCandidateById(user.id) : undefined;
+
   return (
     <div className="flex h-screen overflow-hidden w-full">
       <Sidebar />
@@ -17,10 +26,18 @@ export default function CampaignPage() {
               <h1 className="text-headline-lg-mobile md:text-headline-lg text-primary mb-2">Campaign Management</h1>
               <p className="text-body-lg text-on-surface-variant">আপনার নির্বাচনী ইশতেহার এবং প্রচারণার আপডেট পরিচালনা করুন।</p>
             </div>
-            <button className="px-6 py-3 bg-primary text-on-primary rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors">
-              <span className="material-symbols-outlined">add_box</span>
-              নতুন পোস্ট
-            </button>
+            <div className="flex gap-3">
+              {user && (
+                <Link href={`/candidates/${user.id}`} className="px-4 py-3 border border-outline-variant text-on-surface rounded-lg font-bold flex items-center gap-2 hover:bg-surface-container-lowest transition-colors">
+                  <span className="material-symbols-outlined">visibility</span>
+                  পাবলিক প্রোফাইল দেখুন
+                </Link>
+              )}
+              <Link href="/feed" className="px-6 py-3 bg-primary text-on-primary rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors">
+                <span className="material-symbols-outlined">add_box</span>
+                নতুন পোস্ট
+              </Link>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -42,7 +59,7 @@ export default function CampaignPage() {
                     <textarea 
                       className="w-full bg-surface-container-lowest border border-outline rounded-lg p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary"
                       rows={3}
-                      defaultValue="সবার জন্য শিক্ষা এবং নিরাপদ ডিজিটাল বাংলাদেশ গড়ার প্রত্যয়ে কাজ করে যাব। আমার প্রধান লক্ষ্য কর্মসংস্থান বৃদ্ধি করা।"
+                      defaultValue={myCandidate ? t(`${myCandidate.translationKey}.quote` as any) : ""}
                     />
                     <p className="text-caption text-on-surface-variant mt-1">This text appears on the Voter Dashboard.</p>
                   </div>
@@ -51,7 +68,7 @@ export default function CampaignPage() {
                     <label className="block text-label-md text-on-surface mb-2 font-bold">বিস্তারিত ইশতেহার</label>
                     <textarea 
                       className="w-full bg-surface-container-lowest border border-outline rounded-lg p-3 text-body-md focus:outline-none focus:ring-2 focus:ring-primary h-48"
-                      defaultValue={`১. দুর্নীতিমুক্ত ডিজিটাল সেবা নিশ্চিত করা।\n২. যুবসমাজের জন্য আইটি খাতে ১০,০০০ নতুন কর্মসংস্থান।\n৩. ঢাকা-১০ আসনের প্রতিটি ওয়ার্ডে ফ্রি ওয়াইফাই জোন।\n৪. স্বাস্থ্যসেবার মান উন্নয়ন এবং নতুন ২ টি হাসপাতাল নির্মাণ।`}
+                      defaultValue={myCandidate?.manifestoFull ?? ""}
                     />
                   </div>
                   

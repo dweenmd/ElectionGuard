@@ -7,6 +7,7 @@ import FeedPostCard from "@/components/feed/FeedPostCard";
 import { useAuth } from "@/context/AuthContext";
 import { useFeed } from "@/context/FeedContext";
 import { useTranslation } from "@/context/UIContext";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 
 function FeedContent() {
   const { user } = useAuth();
@@ -34,7 +35,12 @@ function FeedContent() {
 
           <PostComposer />
 
-          {!isLoaded && <p className="text-center text-on-surface-variant py-10">{t("common.loading")}</p>}
+          {!isLoaded && (
+            <div className="flex flex-col gap-4">
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+          )}
 
           {isLoaded && visiblePosts.length === 0 && (
             <div className="text-center py-16 text-on-surface-variant">

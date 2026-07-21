@@ -9,9 +9,25 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useTranslation();
   const [role, setRole] = useState<"voter" | "candidate" | "admin">("voter");
+  const [nid, setNid] = useState("1982374012");
+  const [password, setPassword] = useState("password123");
+  const [errors, setErrors] = useState<{ nid?: string; password?: string }>({});
+
+  const validate = () => {
+    const next: { nid?: string; password?: string } = {};
+    if (!/^\d{10,17}$/.test(nid.trim())) {
+      next.nid = t('login.errorNid');
+    }
+    if (password.length < 6) {
+      next.password = t('login.errorPassword');
+    }
+    setErrors(next);
+    return Object.keys(next).length === 0;
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
     if (role === "admin" || role === "voter" || role === "candidate") {
       login(role);
     }
@@ -84,11 +100,14 @@ export default function LoginPage() {
                   name="nid"
                   type="text"
                   required
-                  className="block w-full pl-10 bg-surface-container-lowest border border-outline rounded-lg py-3 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
+                  value={nid}
+                  onChange={(e) => { setNid(e.target.value); if (errors.nid) setErrors((prev) => ({ ...prev, nid: undefined })); }}
+                  aria-invalid={!!errors.nid}
+                  className={`block w-full pl-10 bg-surface-container-lowest border rounded-lg py-3 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:border-transparent transition-shadow ${errors.nid ? "border-error focus:ring-error" : "border-outline focus:ring-primary"}`}
                   placeholder="e.g. 1982374012"
-                  defaultValue="1982374012"
                 />
               </div>
+              {errors.nid && <p className="text-caption text-error mt-1">{errors.nid}</p>}
             </div>
 
             <div>
@@ -104,10 +123,13 @@ export default function LoginPage() {
                   name="password"
                   type="password"
                   required
-                  className="block w-full pl-10 bg-surface-container-lowest border border-outline rounded-lg py-3 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-shadow"
-                  defaultValue="password123"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((prev) => ({ ...prev, password: undefined })); }}
+                  aria-invalid={!!errors.password}
+                  className={`block w-full pl-10 bg-surface-container-lowest border rounded-lg py-3 text-body-md text-on-surface focus:outline-none focus:ring-2 focus:border-transparent transition-shadow ${errors.password ? "border-error focus:ring-error" : "border-outline focus:ring-primary"}`}
                 />
               </div>
+              {errors.password && <p className="text-caption text-error mt-1">{errors.password}</p>}
             </div>
 
             <div className="flex items-center justify-between">

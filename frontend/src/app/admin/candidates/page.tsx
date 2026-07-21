@@ -2,25 +2,33 @@
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import { useTranslation } from "@/context/UIContext";
+import { mockCandidates } from "@/lib/mockCandidates";
+import { DocStatusKey, NominationStatusKey } from "@/types/candidate";
+import { useSimulatedLoading } from "@/hooks/useSimulatedLoading";
+import { SkeletonStatCard, SkeletonTableRow } from "@/components/ui/Skeleton";
 
-// এই page অ্যাডমিন প্যানেলে সকল প্রার্থীদের তালিকা দেখায় এবং তাদের ডকুমেন্ট যাচাই করার সুবিধা দেয়
+// এই পেজটি অ্যাডমিন প্যানেলে সকল প্রার্থীদের তালিকা দেখায় এবং তাদের ডকুমেন্ট যাচাই করার সুবিধা দেয়।
+// ডেটা এখন mockCandidates.ts থেকে আসছে (আগে এখানে আলাদা করে হার্ডকোড করা ছিল, voter dashboard-এর ডেটার
+// সাথে মিলত না এমন ঝুঁকি ছিল)।
 export default function AdminCandidatesPage() {
   const { t } = useTranslation();
+  const isLoading = useSimulatedLoading();
 
-  const candidates = [
-    { id: "C001", name: t('candidatesData.c1.name'), party: t('candidatesData.c1.party'), constituency: "Dhaka-10", docStatus: t('admin.verified'), nominationStatus: t('admin.accepted') },
-    { id: "C002", name: t('candidatesData.c2.name'), party: t('candidatesData.c2.party'), constituency: "Dhaka-10", docStatus: t('admin.pending'), nominationStatus: t('admin.underReview') },
-    { id: "C003", name: t('candidatesData.c3.name'), party: t('candidatesData.c3.party'), constituency: "Dhaka-10", docStatus: t('admin.verified'), nominationStatus: t('admin.accepted') },
-    { id: "C004", name: t('candidatesData.c4.name'), party: t('candidatesData.c4.party'), constituency: "Dhaka-5", docStatus: t('admin.rejected'), nominationStatus: t('admin.rejected') },
-  ];
-
-  const statusColor: Record<string, string> = {
-    Verified: "text-success bg-success/10 border-success/30",
-    Pending: "text-secondary bg-secondary/10 border-secondary/30",
-    Rejected: "text-error bg-error/10 border-error/30",
-    Accepted: "text-success bg-success/10 border-success/30",
-    "Under Review": "text-secondary bg-secondary/10 border-secondary/30",
+  // status রং এখন canonical key (docStatusKey/nominationStatusKey) দিয়ে নির্ধারণ হয়,
+  // অনুবাদ করা টেক্সট দিয়ে না -- আগে bn ভাষায় switch করলে রং ভেঙে যেত কারণ lookup
+  // ইংরেজি স্ট্রিং ("Verified" ইত্যাদি) দিয়ে করা হতো।
+  const statusColor: Record<DocStatusKey | NominationStatusKey, string> = {
+    verified: "text-success bg-success/10 border-success/30",
+    accepted: "text-success bg-success/10 border-success/30",
+    pending: "text-secondary bg-secondary/10 border-secondary/30",
+    underReview: "text-secondary bg-secondary/10 border-secondary/30",
+    rejected: "text-error bg-error/10 border-error/30",
   };
+
+  const total = mockCandidates.length;
+  const verifiedCount = mockCandidates.filter((c) => c.docStatusKey === "verified").length;
+  const pendingCount = mockCandidates.filter((c) => c.docStatusKey === "pending").length;
+  const rejectedCount = mockCandidates.filter((c) => c.docStatusKey === "rejected").length;
 
   return (
     <div className="flex h-screen overflow-hidden w-full">
@@ -37,28 +45,39 @@ export default function AdminCandidatesPage() {
             </div>
             <div className="flex items-center gap-2 bg-surface-container-low border border-outline-variant px-4 py-2 rounded-lg">
               <span className="material-symbols-outlined text-primary">group</span>
-              <span className="text-label-md font-bold text-on-surface">{candidates.length} {t('admin.totalCandidates')}</span>
+              <span className="text-label-md font-bold text-on-surface">{total} {t('admin.totalCandidates')}</span>
             </div>
           </div>
 
           {/* Stats Row */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="bg-surface rounded-xl p-4 shadow-card border border-outline-variant text-center">
-              <p className="text-caption text-on-surface-variant mb-1">{t('admin.total')}</p>
-              <p className="text-headline-md font-bold text-primary">4</p>
-            </div>
-            <div className="bg-surface rounded-xl p-4 shadow-card border border-outline-variant text-center">
-              <p className="text-caption text-on-surface-variant mb-1">{t('admin.verified')}</p>
-              <p className="text-headline-md font-bold text-success">2</p>
-            </div>
-            <div className="bg-surface rounded-xl p-4 shadow-card border border-outline-variant text-center">
-              <p className="text-caption text-on-surface-variant mb-1">{t('admin.pending')}</p>
-              <p className="text-headline-md font-bold text-secondary">1</p>
-            </div>
-            <div className="bg-surface rounded-xl p-4 shadow-card border border-outline-variant text-center">
-              <p className="text-caption text-on-surface-variant mb-1">{t('admin.rejected')}</p>
-              <p className="text-headline-md font-bold text-error">1</p>
-            </div>
+            {isLoading ? (
+              <>
+                <SkeletonStatCard />
+                <SkeletonStatCard />
+                <SkeletonStatCard />
+                <SkeletonStatCard />
+              </>
+            ) : (
+              <>
+                <div className="bg-surface rounded-xl p-4 shadow-card border border-outline-variant text-center">
+                  <p className="text-caption text-on-surface-variant mb-1">{t('admin.total')}</p>
+                  <p className="text-headline-md font-bold text-primary">{total}</p>
+                </div>
+                <div className="bg-surface rounded-xl p-4 shadow-card border border-outline-variant text-center">
+                  <p className="text-caption text-on-surface-variant mb-1">{t('admin.verified')}</p>
+                  <p className="text-headline-md font-bold text-success">{verifiedCount}</p>
+                </div>
+                <div className="bg-surface rounded-xl p-4 shadow-card border border-outline-variant text-center">
+                  <p className="text-caption text-on-surface-variant mb-1">{t('admin.pending')}</p>
+                  <p className="text-headline-md font-bold text-secondary">{pendingCount}</p>
+                </div>
+                <div className="bg-surface rounded-xl p-4 shadow-card border border-outline-variant text-center">
+                  <p className="text-caption text-on-surface-variant mb-1">{t('admin.rejected')}</p>
+                  <p className="text-headline-md font-bold text-error">{rejectedCount}</p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Candidates Table */}
@@ -85,27 +104,34 @@ export default function AdminCandidatesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/30">
-                  {candidates.map((c) => (
+                  {isLoading && (
+                    <>
+                      <SkeletonTableRow cols={7} />
+                      <SkeletonTableRow cols={7} />
+                      <SkeletonTableRow cols={7} />
+                    </>
+                  )}
+                  {!isLoading && mockCandidates.map((c) => (
                     <tr key={c.id} className="hover:bg-surface-container-lowest/50 transition-colors">
                       <td className="p-4 text-body-md font-mono text-on-surface-variant">{c.id}</td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
-                            <span className="material-symbols-outlined text-lg">person</span>
+                            <span className="material-symbols-outlined text-lg">{c.icon}</span>
                           </div>
-                          <span className="text-body-md font-bold text-on-surface">{c.name}</span>
+                          <span className="text-body-md font-bold text-on-surface">{t(`${c.translationKey}.name` as any)}</span>
                         </div>
                       </td>
-                      <td className="p-4 text-body-md text-on-surface-variant">{c.party}</td>
-                      <td className="p-4 text-body-md text-on-surface">{c.constituency}</td>
+                      <td className="p-4 text-body-md text-on-surface-variant">{t(`${c.translationKey}.party` as any)}</td>
+                      <td className="p-4 text-body-md text-on-surface">{c.constituencyName}</td>
                       <td className="p-4">
-                        <span className={`text-label-md px-2 py-1 rounded-full border ${statusColor[c.docStatus]}`}>
-                          {c.docStatus}
+                        <span className={`text-label-md px-2 py-1 rounded-full border ${statusColor[c.docStatusKey]}`}>
+                          {t(`admin.${c.docStatusKey}` as any)}
                         </span>
                       </td>
                       <td className="p-4">
-                        <span className={`text-label-md px-2 py-1 rounded-full border ${statusColor[c.nominationStatus]}`}>
-                          {c.nominationStatus}
+                        <span className={`text-label-md px-2 py-1 rounded-full border ${statusColor[c.nominationStatusKey]}`}>
+                          {t(`admin.${c.nominationStatusKey}` as any)}
                         </span>
                       </td>
                       <td className="p-4">
