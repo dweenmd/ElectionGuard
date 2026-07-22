@@ -50,7 +50,7 @@ export default function VoterDashboardPage() {
                   </>
                 )}
                 {!isLoading && myCandidates.map((c) => (
-                  <div key={c.id} className="bg-surface rounded-xl p-6 shadow-card border border-outline-variant flex flex-col sm:flex-row gap-6 items-start">
+                  <div key={c.id} className="bg-surface rounded-xl p-6 shadow-card border border-outline-variant flex flex-col sm:flex-row gap-6 items-start card-hover animate-rise">
                     <div className="w-20 h-20 rounded-full bg-surface-container-high border-4 border-surface-variant flex items-center justify-center shrink-0 overflow-hidden">
                       <span className="material-symbols-outlined text-4xl text-on-surface-variant">{c.icon}</span>
                     </div>

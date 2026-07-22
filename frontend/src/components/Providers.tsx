@@ -6,16 +6,29 @@ import { AuthProvider } from "@/context/AuthContext";
 import { Web3Provider } from "@/context/Web3Context";
 import { FeedProvider } from "@/context/FeedContext";
 import { GrievanceProvider } from "@/context/GrievanceContext";
+import { NotificationProvider } from "@/context/NotificationContext";
+import { CandidateProvider } from "@/context/CandidateContext";
+import { AuditLogProvider } from "@/context/AuditLogContext";
+import { AccessibilityProvider } from "@/context/AccessibilityContext";
+import IdleTimeoutGuard from "@/components/IdleTimeoutGuard";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <AccessibilityProvider>
       <AuthProvider>
         <Web3Provider>
           <UIProvider>
             <FeedProvider>
               <GrievanceProvider>
-                {children}
+                <CandidateProvider>
+                  <AuditLogProvider>
+                    <NotificationProvider>
+                      {children}
+                      <IdleTimeoutGuard />
+                    </NotificationProvider>
+                  </AuditLogProvider>
+                </CandidateProvider>
               </GrievanceProvider>
             </FeedProvider>
             <Toaster 
@@ -32,6 +45,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           </UIProvider>
         </Web3Provider>
       </AuthProvider>
+      </AccessibilityProvider>
     </ThemeProvider>
   );
 }

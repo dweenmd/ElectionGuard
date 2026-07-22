@@ -1,12 +1,12 @@
 export function SkeletonLine({ className = "" }: { className?: string }) {
-  return <div className={`bg-surface-variant/60 rounded animate-pulse ${className}`} />;
+  return <div className={`animate-shimmer rounded ${className}`} />;
 }
 
 export function SkeletonCard() {
   return (
     <div className="bg-surface rounded-xl shadow-card border border-outline-variant p-5 md:p-6 flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-full bg-surface-variant/60 animate-pulse shrink-0" />
+        <div className="w-11 h-11 rounded-full animate-shimmer shrink-0" />
         <div className="flex-1 flex flex-col gap-2">
           <SkeletonLine className="h-4 w-1/3" />
           <SkeletonLine className="h-3 w-1/5" />

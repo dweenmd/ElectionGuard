@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useFeed } from "@/context/FeedContext";
+import { useAuditLog } from "@/context/AuditLogContext";
 import { useTranslation } from "@/context/UIContext";
 import { FeedPost } from "@/types/feed";
 import CommentSection from "./CommentSection";
@@ -24,6 +25,7 @@ function timeAgo(iso: string, lang: "bn" | "en") {
 export default function FeedPostCard({ post }: { post: FeedPost }) {
   const { user } = useAuth();
   const { toggleLike, reportPost, removePost, commentsFor } = useFeed();
+  const { logAction } = useAuditLog();
   const { t, language } = useTranslation();
   const [showComments, setShowComments] = useState(false);
   const [reported, setReported] = useState(false);
@@ -40,7 +42,7 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
 
   return (
     <article
-      className={`bg-surface rounded-xl shadow-card border p-5 md:p-6 flex flex-col gap-4 ${
+      className={`bg-surface rounded-xl shadow-card border p-5 md:p-6 flex flex-col gap-4 card-hover ${
         isNotice ? "border-primary/40" : "border-outline-variant"
       }`}
     >
@@ -97,7 +99,7 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
               liked ? "text-primary bg-primary/10" : "text-on-surface-variant hover:bg-surface-variant/50"
             }`}
           >
-            <span className="material-symbols-outlined text-[18px]" style={liked ? { fontVariationSettings: "'FILL' 1" } : undefined}>
+            <span className="material-symbols-outlined text-[18px] transition-transform duration-200" style={liked ? { fontVariationSettings: "'FILL' 1", transform: "scale(1.15)" } : undefined}>
               thumb_up
             </span>
             {post.likedBy.length > 0 ? post.likedBy.length : t("feed.like")}
@@ -113,7 +115,7 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
         <div className="flex items-center gap-2">
           {user?.role === "admin" && (
             <button
-              onClick={() => removePost(post.id)}
+              onClick={() => { removePost(post.id); logAction("Post Removed", `"${post.title}" by ${post.author.name}`); }}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-label-sm font-bold text-error hover:bg-error/10 transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -131,7 +133,7 @@ export default function FeedPostCard({ post }: { post: FeedPost }) {
         </div>
       </div>
 
-      {showComments && <CommentSection postId={post.id} />}
+      {showComments && <div className="animate-expand"><CommentSection postId={post.id} /></div>}
     </article>
   );
 }

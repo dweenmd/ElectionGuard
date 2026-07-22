@@ -1,9 +1,18 @@
 "use client";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
+import { getLoginHistory, LoginHistoryEntry } from "@/lib/loginHistory";
+import { useTranslation } from "@/context/UIContext";
 
 export default function ProfilePage() {
+  const { t } = useTranslation();
+  const [history, setHistory] = useState<LoginHistoryEntry[]>([]);
+
+  useEffect(() => {
+    setHistory(getLoginHistory());
+  }, []);
   return (
     <div className="flex h-screen overflow-hidden w-full">
       <Sidebar />
@@ -107,6 +116,24 @@ export default function ProfilePage() {
                       <span className="material-symbols-outlined">chevron_right</span>
                     </button>
                   </div>
+                </div>
+              </div>
+
+              {/* Login Activity */}
+              <div className="bg-surface-container-lowest rounded-xl shadow-card p-6">
+                <h5 className="text-body-lg font-semibold text-on-surface flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined text-primary">history</span> {t('profilePage.loginActivity')}
+                </h5>
+                {history.length === 0 && (
+                  <p className="text-caption text-on-surface-variant">{t('profilePage.noLoginHistory')}</p>
+                )}
+                <div className="space-y-3">
+                  {history.map((h, i) => (
+                    <div key={i} className="flex justify-between items-center text-caption">
+                      <span className="text-on-surface">{h.device}</span>
+                      <span className="text-on-surface-variant">{new Date(h.timestamp).toLocaleString()}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 

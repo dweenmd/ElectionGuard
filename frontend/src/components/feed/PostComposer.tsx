@@ -2,12 +2,14 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useFeed } from "@/context/FeedContext";
+import { useAuditLog } from "@/context/AuditLogContext";
 import { useTranslation } from "@/context/UIContext";
 import toast from "react-hot-toast";
 
 export default function PostComposer() {
   const { user } = useAuth();
   const { addNotice, addCandidatePost } = useFeed();
+  const { logAction } = useAuditLog();
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
@@ -30,6 +32,7 @@ export default function PostComposer() {
     if (!title.trim() || !body.trim()) return;
     if (isAdmin) {
       addNotice({ title: title.trim(), body: body.trim(), pinned });
+      logAction("Notice Published", title.trim());
       toast.success(t("feed.noticePublished"));
     } else {
       addCandidatePost({ title: title.trim(), body: body.trim() });
@@ -49,7 +52,7 @@ export default function PostComposer() {
           {isAdmin ? t("feed.composerPromptAdmin") : t("feed.composerPromptCandidate")}
         </button>
       ) : (
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 animate-expand">
           <div className="flex items-center justify-between">
             <h3 className="text-body-lg font-bold text-on-surface flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">{isAdmin ? "campaign" : "edit_note"}</span>

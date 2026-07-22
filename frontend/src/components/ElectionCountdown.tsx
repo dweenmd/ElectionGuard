@@ -70,7 +70,7 @@ export default function ElectionCountdown() {
           { value: remaining?.minutes ?? 0, label: t('countdown.minutes') },
           { value: remaining?.seconds ?? 0, label: t('countdown.seconds') },
         ].map((unit) => (
-          <div key={unit.label} className="bg-surface-container-lowest rounded-lg py-2">
+          <div key={unit.label} className="bg-surface-container-lowest rounded-lg py-2 transition-transform duration-150">
             <p className="text-headline-md font-bold text-primary tabular-nums">{String(unit.value).padStart(2, "0")}</p>
             <p className="text-caption text-on-surface-variant">{unit.label}</p>
           </div>

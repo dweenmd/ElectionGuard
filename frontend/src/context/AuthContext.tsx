@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import Cookies from "js-cookie";
 import { useRouter, usePathname } from "next/navigation";
+import { recordLogin } from "@/lib/loginHistory";
 
 type Role = "voter" | "candidate" | "admin" | null;
 
@@ -62,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
     setUser(mockUser);
     Cookies.set("eg_user", JSON.stringify(mockUser), { expires: 1 }); // Expires in 1 day
+    recordLogin();
     
     // Redirect based on role
     if (role === "admin") router.push("/admin");

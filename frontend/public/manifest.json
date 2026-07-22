@@ -1,0 +1,12 @@
+{
+  "name": "ElectionGuard - Secure E-Voting Platform",
+  "short_name": "ElectionGuard",
+  "description": "Secure, scalable e-voting platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9faf5",
+  "theme_color": "#000000",
+  "icons": [
+    { "src": "/next.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -51,7 +51,7 @@ function CandidateProfileContent() {
           </Link>
 
           {/* Profile header */}
-          <div className="bg-surface rounded-xl shadow-card border border-outline-variant p-6 flex flex-col sm:flex-row gap-6 items-start">
+          <div className="bg-surface rounded-xl shadow-card border border-outline-variant p-6 flex flex-col sm:flex-row gap-6 items-start animate-rise">
             <div className="w-24 h-24 rounded-full bg-surface-container-high border-4 border-surface-variant flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-5xl text-on-surface-variant">{candidate.icon}</span>
             </div>
@@ -69,7 +69,7 @@ function CandidateProfileContent() {
           </div>
 
           {/* Manifesto */}
-          <div className="bg-surface rounded-xl shadow-card border border-outline-variant p-6">
+          <div className="bg-surface rounded-xl shadow-card border border-outline-variant p-6 animate-rise">
             <h2 className="text-title-md font-bold text-on-surface mb-3 flex items-center gap-2">
               <span className="material-symbols-outlined text-primary">description</span>
               {t('candidateProfile.manifesto')}

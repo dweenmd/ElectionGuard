@@ -73,7 +73,7 @@ function GrievanceContent() {
               <p className="text-caption text-on-surface-variant mt-1">{description.trim().length}/20 {t('grievance.minChars')}</p>
             </div>
             <div className="flex justify-end">
-              <button type="submit" className="px-6 py-3 bg-primary text-on-primary rounded-lg font-bold hover:bg-primary/90 transition-colors">
+              <button type="submit" className="px-6 py-3 bg-primary text-on-primary rounded-lg font-bold hover:bg-primary/90 transition-all active:scale-95">
                 {t('grievance.submit')}
               </button>
             </div>
@@ -87,7 +87,7 @@ function GrievanceContent() {
               </p>
             )}
             {myGrievances.map((g) => (
-              <div key={g.id} className="bg-surface rounded-xl shadow-card border border-outline-variant p-5 flex flex-col gap-2">
+              <div key={g.id} className="bg-surface rounded-xl shadow-card border border-outline-variant p-5 flex flex-col gap-2 card-hover animate-rise">
                 <div className="flex items-center justify-between">
                   <span className="text-label-md font-bold text-on-surface">{t(`grievance.category.${g.category}` as any)}</span>
                   <span className={`text-caption font-bold px-2 py-1 rounded-full border ${statusColor[g.status]}`}>{t(`grievance.status.${g.status}` as any)}</span>

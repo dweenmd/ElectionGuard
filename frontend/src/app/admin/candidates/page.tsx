@@ -2,21 +2,20 @@
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import { useTranslation } from "@/context/UIContext";
-import { mockCandidates } from "@/lib/mockCandidates";
+import { useCandidates } from "@/context/CandidateContext";
+import { useAuditLog } from "@/context/AuditLogContext";
 import { DocStatusKey, NominationStatusKey } from "@/types/candidate";
 import { useSimulatedLoading } from "@/hooks/useSimulatedLoading";
 import { SkeletonStatCard, SkeletonTableRow } from "@/components/ui/Skeleton";
+import { downloadCsv } from "@/lib/csvExport";
+import toast from "react-hot-toast";
 
-// এই পেজটি অ্যাডমিন প্যানেলে সকল প্রার্থীদের তালিকা দেখায় এবং তাদের ডকুমেন্ট যাচাই করার সুবিধা দেয়।
-// ডেটা এখন mockCandidates.ts থেকে আসছে (আগে এখানে আলাদা করে হার্ডকোড করা ছিল, voter dashboard-এর ডেটার
-// সাথে মিলত না এমন ঝুঁকি ছিল)।
 export default function AdminCandidatesPage() {
   const { t } = useTranslation();
   const isLoading = useSimulatedLoading();
+  const { candidates, updateCandidateStatus } = useCandidates();
+  const { logAction } = useAuditLog();
 
-  // status রং এখন canonical key (docStatusKey/nominationStatusKey) দিয়ে নির্ধারণ হয়,
-  // অনুবাদ করা টেক্সট দিয়ে না -- আগে bn ভাষায় switch করলে রং ভেঙে যেত কারণ lookup
-  // ইংরেজি স্ট্রিং ("Verified" ইত্যাদি) দিয়ে করা হতো।
   const statusColor: Record<DocStatusKey | NominationStatusKey, string> = {
     verified: "text-success bg-success/10 border-success/30",
     accepted: "text-success bg-success/10 border-success/30",
@@ -25,10 +24,31 @@ export default function AdminCandidatesPage() {
     rejected: "text-error bg-error/10 border-error/30",
   };
 
-  const total = mockCandidates.length;
-  const verifiedCount = mockCandidates.filter((c) => c.docStatusKey === "verified").length;
-  const pendingCount = mockCandidates.filter((c) => c.docStatusKey === "pending").length;
-  const rejectedCount = mockCandidates.filter((c) => c.docStatusKey === "rejected").length;
+  const total = candidates.length;
+  const verifiedCount = candidates.filter((c) => c.docStatusKey === "verified").length;
+  const pendingCount = candidates.filter((c) => c.docStatusKey === "pending").length;
+  const rejectedCount = candidates.filter((c) => c.docStatusKey === "rejected").length;
+
+  const handleApprove = (id: string) => {
+    updateCandidateStatus(id, "verified", "accepted");
+    logAction("Candidate Approved", `${id} approved and verified`);
+    toast.success(t('admin.actionApproved'));
+  };
+
+  const handleReject = (id: string) => {
+    updateCandidateStatus(id, "rejected", "rejected");
+    logAction("Candidate Rejected", `${id} rejected`);
+    toast.success(t('admin.actionRejected'));
+  };
+
+  const handleExport = () => {
+    downloadCsv(
+      "candidates.csv",
+      ["ID", "Name", "Party", "Constituency", "Doc Status", "Nomination Status"],
+      candidates.map((c) => [c.id, t(`${c.translationKey}.name` as any), t(`${c.translationKey}.party` as any), c.constituencyName, c.docStatusKey, c.nominationStatusKey])
+    );
+    logAction("Exported Candidate List", `${candidates.length} candidates exported as CSV`);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden w-full">
@@ -43,9 +63,15 @@ export default function AdminCandidatesPage() {
               <h1 className="text-headline-lg-mobile md:text-headline-lg text-primary mb-2">{t('admin.candidateManagement')}</h1>
               <p className="text-body-lg text-on-surface-variant">{t('admin.candidateManagementDesc')}</p>
             </div>
-            <div className="flex items-center gap-2 bg-surface-container-low border border-outline-variant px-4 py-2 rounded-lg">
-              <span className="material-symbols-outlined text-primary">group</span>
-              <span className="text-label-md font-bold text-on-surface">{total} {t('admin.totalCandidates')}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={handleExport} className="flex items-center gap-2 bg-surface-container-low border border-outline-variant hover:border-primary px-4 py-2 rounded-lg text-label-md font-bold text-on-surface transition-colors">
+                <span className="material-symbols-outlined text-[18px]">download</span>
+                {t('admin.exportCsv')}
+              </button>
+              <div className="flex items-center gap-2 bg-surface-container-low border border-outline-variant px-4 py-2 rounded-lg">
+                <span className="material-symbols-outlined text-primary">group</span>
+                <span className="text-label-md font-bold text-on-surface">{total} {t('admin.totalCandidates')}</span>
+              </div>
             </div>
           </div>
 
@@ -111,7 +137,7 @@ export default function AdminCandidatesPage() {
                       <SkeletonTableRow cols={7} />
                     </>
                   )}
-                  {!isLoading && mockCandidates.map((c) => (
+                  {!isLoading && candidates.map((c) => (
                     <tr key={c.id} className="hover:bg-surface-container-lowest/50 transition-colors">
                       <td className="p-4 text-body-md font-mono text-on-surface-variant">{c.id}</td>
                       <td className="p-4">
@@ -139,10 +165,10 @@ export default function AdminCandidatesPage() {
                           <button className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors" title="View Documents">
                             <span className="material-symbols-outlined text-[18px]">folder_open</span>
                           </button>
-                          <button className="p-2 hover:bg-success/10 text-success rounded-lg transition-colors" title="Approve">
+                          <button onClick={() => handleApprove(c.id)} className="p-2 hover:bg-success/10 text-success rounded-lg transition-colors" title="Approve">
                             <span className="material-symbols-outlined text-[18px]">check_circle</span>
                           </button>
-                          <button className="p-2 hover:bg-error/10 text-error rounded-lg transition-colors" title="Reject">
+                          <button onClick={() => handleReject(c.id)} className="p-2 hover:bg-error/10 text-error rounded-lg transition-colors" title="Reject">
                             <span className="material-symbols-outlined text-[18px]">cancel</span>
                           </button>
                         </div>

@@ -74,7 +74,7 @@ export default function AdminResultsPage() {
                                     <span className="text-on-surface-variant">{c.voteCount.toLocaleString()} ({pct}%)</span>
                                   </div>
                                   <div className="w-full bg-surface-variant rounded-full h-2">
-                                    <div className={`h-2 rounded-full ${idx === 0 ? "bg-primary" : "bg-secondary"}`} style={{ width: `${pct}%` }} />
+                                    <div className={`h-2 rounded-full transition-all duration-700 ease-out ${idx === 0 ? "bg-primary" : "bg-secondary"}`} style={{ width: `${pct}%` }} />
                                   </div>
                                 </div>
                               );

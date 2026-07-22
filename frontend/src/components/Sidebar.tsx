@@ -17,8 +17,12 @@ export default function Sidebar({ role: propRole }: { role?: "voter" | "candidat
     { name: t('common.feed'), icon: 'newspaper', path: '/feed' },
     { name: t('common.vote'), icon: 'how_to_vote', path: '/vote' },
     { name: t('common.grievance'), icon: 'report', path: '/grievance' },
+    { name: t('common.compare'), icon: 'compare_arrows', path: '/compare' },
+    { name: t('common.pollingCenter'), icon: 'location_on', path: '/polling-centers' },
+    { name: t('common.voterSlip'), icon: 'qr_code_2', path: '/voter/slip' },
     { name: t('common.uploadDocs'), icon: 'upload_file', path: '/voter/upload' },
     { name: t('common.profile'), icon: 'person', path: '/profile' },
+    { name: t('common.help'), icon: 'help', path: '/help' },
   ];
 
   const candidateLinks = [
@@ -27,7 +31,10 @@ export default function Sidebar({ role: propRole }: { role?: "voter" | "candidat
     { name: t('common.uploadDocs'), icon: 'upload_file', path: '/candidate/upload' },
     { name: t('common.campaign'), icon: 'campaign', path: '/candidate/campaign' },
     { name: t('common.vote'), icon: 'how_to_vote', path: '/vote' },
+    { name: t('common.compare'), icon: 'compare_arrows', path: '/compare' },
+    { name: t('common.pollingCenter'), icon: 'location_on', path: '/polling-centers' },
     { name: t('common.profile'), icon: 'person', path: '/profile' },
+    { name: t('common.help'), icon: 'help', path: '/help' },
   ];
 
   const adminLinks = [
@@ -36,6 +43,9 @@ export default function Sidebar({ role: propRole }: { role?: "voter" | "candidat
     { name: t('common.candidates'), icon: 'group', path: '/admin/candidates' },
     { name: t('common.grievance'), icon: 'report', path: '/admin/grievances' },
     { name: t('common.results'), icon: 'bar_chart', path: '/admin/results' },
+    { name: t('common.analytics'), icon: 'monitoring', path: '/admin/analytics' },
+    { name: t('common.auditLog'), icon: 'history', path: '/admin/audit-log' },
+    { name: t('common.help'), icon: 'help', path: '/help' },
   ];
 
   const links = role === "admin" ? adminLinks : role === "candidate" ? candidateLinks : voterLinks;

@@ -2,11 +2,13 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useFeed } from "@/context/FeedContext";
+import { useAuditLog } from "@/context/AuditLogContext";
 import { useTranslation } from "@/context/UIContext";
 
 export default function CommentSection({ postId }: { postId: string }) {
   const { user } = useAuth();
   const { commentsFor, addComment, reportComment, hideComment } = useFeed();
+  const { logAction } = useAuditLog();
   const { t } = useTranslation();
   const [text, setText] = useState("");
   const comments = commentsFor(postId);
@@ -27,7 +29,7 @@ export default function CommentSection({ postId }: { postId: string }) {
 
       <div className="flex flex-col gap-3">
         {comments.map((c) => (
-          <div key={c.id} className="flex gap-3">
+          <div key={c.id} className="flex gap-3 animate-rise">
             <div className="w-8 h-8 rounded-full bg-surface-container-high flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-[16px] text-on-surface-variant">person</span>
             </div>
@@ -37,7 +39,7 @@ export default function CommentSection({ postId }: { postId: string }) {
                 <div className="flex items-center gap-2">
                   {user?.role === "admin" && (
                     <button
-                      onClick={() => hideComment(c.id)}
+                      onClick={() => { hideComment(c.id); logAction("Comment Hidden", `by ${c.author.name}`); }}
                       className="text-caption text-error hover:underline"
                     >
                       {t("feed.hide")}
