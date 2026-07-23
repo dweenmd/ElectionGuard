@@ -1,4 +1,10 @@
 import Cookies from "js-cookie";
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON,
+  AuthenticationResponseJSON,
+} from "@simplewebauthn/browser";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -76,6 +82,33 @@ export const api = {
           constituencyName: string;
         };
       }>("/auth/verify"),
+  },
+
+  // WebAuthn API (real device fingerprint / Face ID / Windows Hello)
+  webauthn: {
+    registerOptions: (nid: string, name?: string) =>
+      request<PublicKeyCredentialCreationOptionsJSON>("/webauthn/register-options", {
+        method: "POST",
+        body: JSON.stringify({ nid, name }),
+      }),
+
+    registerVerify: (nid: string, credential: RegistrationResponseJSON) =>
+      request<{ verified: boolean; credentialId: string }>("/webauthn/register-verify", {
+        method: "POST",
+        body: JSON.stringify({ nid, credential }),
+      }),
+
+    loginOptions: (nid: string) =>
+      request<PublicKeyCredentialRequestOptionsJSON>("/webauthn/login-options", {
+        method: "POST",
+        body: JSON.stringify({ nid }),
+      }),
+
+    loginVerify: (nid: string, credential: AuthenticationResponseJSON) =>
+      request<{ verified: boolean }>("/webauthn/login-verify", {
+        method: "POST",
+        body: JSON.stringify({ nid, credential }),
+      }),
   },
 
   // Election API
