@@ -1,50 +1,112 @@
-const { spawn, exec } = require('child_process');
-const path = require('path');
+const { spawn, exec } = require("child_process");
+const path = require("path");
 
-console.log("🚀 Starting GonoVote dApp...");
+console.log("🚀 Starting ElectionGuard dApp...");
 
-const hardhatBin = path.join(__dirname, 'node_modules', '.bin', /^win/.test(process.platform) ? 'hardhat.cmd' : 'hardhat');
-const npmCmd = /^win/.test(process.platform) ? 'npm.cmd' : 'npm';
+const isWindows = process.platform === "win32";
 
-// 1. Start hardhat node
-const node = spawn(hardhatBin, ['node'], { stdio: 'pipe', shell: true });
+const hardhatBin = path.join(
+    __dirname,
+    "node_modules",
+    ".bin",
+    isWindows ? "hardhat.cmd" : "hardhat"
+);
+
+const npmCmd = isWindows ? "npm.cmd" : "npm";
+
+let backend;
+let frontend;
+let hardhatNode;
+
+function openBrowser(url) {
+    if (isWindows) {
+        exec(`start "" "${url}"`);
+    } else if (process.platform === "darwin") {
+        exec(`open "${url}"`);
+    } else {
+        exec(`xdg-open "${url}"`);
+    }
+}
+
+console.log("⛓ Starting Hardhat Node...");
+
+hardhatNode = spawn(hardhatBin, ["node"], {
+    cwd: __dirname,
+    shell: true,
+    stdio: ["ignore", "pipe", "pipe"],
+});
 
 let deployed = false;
 
-node.stdout.on('data', (data) => {
+hardhatNode.stdout.on("data", (data) => {
     const output = data.toString();
-    
-    // 2. When node is ready, deploy contract
-    if (output.includes('Started HTTP and WebSocket JSON-RPC server') && !deployed) {
+    process.stdout.write(output);
+
+    if (
+        output.includes("Started HTTP and WebSocket JSON-RPC server") &&
+        !deployed
+    ) {
         deployed = true;
-        console.log("✅ Local Hardhat Node is running.");
-        console.log("⏳ Deploying smart contracts...");
-        
-        exec(`"${hardhatBin}" run scripts/deploy.js --network localhost`, { shell: true }, (error, stdout, stderr) => {
-            if (error) {
-                console.error("❌ Deployment failed:");
-                console.error(stderr || error.message);
-                return;
+
+        console.log("\n✅ Hardhat Node Started");
+        console.log("📦 Deploying Smart Contract...\n");
+
+        exec(
+            `"${hardhatBin}" run scripts/deploy.js --network localhost`,
+            {
+                cwd: __dirname,
+                shell: true,
+            },
+            (err, stdout, stderr) => {
+                if (err) {
+                    console.error(stderr || err.message);
+                    return;
+                }
+
+                console.log(stdout);
+
+                console.log("✅ Contract Deployed");
+
+                console.log("⚡ Starting Backend...");
+
+                backend = spawn(npmCmd, ["run", "dev"], {
+                    cwd: path.join(__dirname, "backend"),
+                    shell: true,
+                    stdio: "inherit",
+                });
+
+                console.log("🌐 Starting Frontend...");
+
+                frontend = spawn(npmCmd, ["run", "dev"], {
+                    cwd: path.join(__dirname, "frontend"),
+                    shell: true,
+                    stdio: "inherit",
+                });
+
+                console.log("\n🎉 ElectionGuard Started Successfully");
+                console.log("Backend : http://localhost:5000");
+                console.log("Frontend: http://localhost:3000");
+
+                console.log("\n🌍 Opening Browser...");
+
+                setTimeout(() => {
+                    openBrowser("http://localhost:3000");
+                }, 8000);
             }
-            console.log(stdout);
-            console.log("✅ Deployment complete.");
-            
-            // 3. Start frontend server
-            console.log("🌐 Starting frontend Next.js dev server...");
-            const server = spawn(npmCmd, ['run', 'dev'], { cwd: './frontend', stdio: 'inherit', shell: true });
-            
-            console.log("🎉 Frontend starting! Access it at http://localhost:3000");
-        });
+        );
     }
 });
 
-node.stderr.on('data', (data) => {
-    console.error(`[Node Error]: ${data}`);
+hardhatNode.stderr.on("data", (data) => {
+    process.stderr.write(data.toString());
 });
 
-// Clean up on exit
-process.on('SIGINT', () => {
-    console.log("Shutting down...");
-    node.kill();
+process.on("SIGINT", () => {
+    console.log("\n🛑 Stopping Services...");
+
+    if (frontend) frontend.kill();
+    if (backend) backend.kill();
+    if (hardhatNode) hardhatNode.kill();
+
     process.exit();
 });

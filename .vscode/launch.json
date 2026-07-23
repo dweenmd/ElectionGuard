@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run ElectionGuard",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/runner.js",
+            "console": "integratedTerminal"
+        }
+    ]
+}
