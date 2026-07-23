@@ -49,6 +49,23 @@ export const api = {
         body: JSON.stringify({ nid, role }),
       }),
 
+    register: (userData: { nid: string; name: string; dob?: string; phone?: string; constituencyId?: string; faceDescriptor?: string; fingerprintHash?: string }) =>
+      request<{
+        token: string;
+        user: {
+          id: string;
+          name: string;
+          role: "voter";
+          constituencyId: string;
+          constituencyName: string;
+          faceDescriptor?: string;
+          fingerprintHash?: string;
+        };
+      }>("/auth/register", {
+        method: "POST",
+        body: JSON.stringify(userData),
+      }),
+
     verify: () =>
       request<{
         user: {
@@ -74,7 +91,7 @@ export const api = {
 
     getStatus: () =>
       request<{
-        status: "Created" | "Voting" | "Ended";
+        status: "Created" | "NotStarted" | "Voting" | "Ongoing" | "Ended";
         stateIndex: number;
       }>("/election/status"),
 

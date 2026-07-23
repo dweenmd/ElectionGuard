@@ -15,8 +15,8 @@ export default function LoginPage() {
 
   const validate = () => {
     const next: { nid?: string; password?: string } = {};
-    if (!/^\d{10,17}$/.test(nid.trim())) {
-      next.nid = t('login.errorNid');
+    if (!/^(\d{10}|\d{17})$/.test(nid.trim())) {
+      next.nid = "বাংলাদেশ এনআইডি অবশ্যই ১০ ডিজিট (স্মার্ট কার্ড) অথবা ১৭ ডিজিট হতে হবে।";
     }
     if (password.length < 6) {
       next.password = t('login.errorPassword');
@@ -25,12 +25,14 @@ export default function LoginPage() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
-    if (role === "admin" || role === "voter" || role === "candidate") {
+    try {
+      await login(role, nid, password);
       toast.success(t('login.successToast'));
-      login(role);
+    } catch (err: any) {
+      toast.error(err.message || "Unauthorized account. Please check your NID and selected role.");
     }
   };
 
@@ -162,10 +164,7 @@ export default function LoginPage() {
               </button>
             </div>
             
-            <div className="mt-4 text-center space-y-4">
-              <p className="text-xs text-on-surface-variant bg-surface-variant/30 p-2 rounded border border-outline-variant/30">
-                Demo Accounts: Any ID/Password will log you in based on the selected role tab.
-              </p>
+            <div className="mt-4 text-center">
               <Link href="/register" className="block text-sm font-bold text-primary hover:underline">
                 {t('login.newVoter')}
               </Link>

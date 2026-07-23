@@ -1,5 +1,19 @@
 [
   {
+    "id": "log-1784827511545-44p70",
+    "actor": "Election Officer",
+    "action": "Results Published",
+    "details": "Election results published to public portal",
+    "createdAt": "2026-07-23T17:25:11.545Z"
+  },
+  {
+    "id": "log-1784827501768-10yov",
+    "actor": "Election Officer",
+    "action": "Election Stopped",
+    "details": "Voting was closed platform-wide",
+    "createdAt": "2026-07-23T17:25:01.768Z"
+  },
+  {
     "id": "log-1784826352727-ick2l",
     "actor": "Election Officer",
     "action": "Election Started",

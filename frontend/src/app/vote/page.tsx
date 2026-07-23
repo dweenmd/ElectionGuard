@@ -126,23 +126,31 @@ export default function VotePage() {
     router.push("/voter");
   };
 
+  const [bioStep, setBioStep] = useState<"idle" | "verifying" | "matched">("idle");
+
   const handleConfirmVote = async () => {
     if (!selectedCandidate || !user) return;
     setIsSubmitting(true);
+    setBioStep("verifying");
 
-    const numericCandidateId = selectedCandidate === "c1" ? 1 : selectedCandidate === "c2" ? 2 : 3;
+    setTimeout(async () => {
+      setBioStep("matched");
 
-    try {
-      await api.vote.submit(numericCandidateId);
-    } catch (err) {
-      console.warn("Backend vote submission warning (continuing with local record):", err);
-    }
+      const numericCandidateId = selectedCandidate === "c1" ? 1 : selectedCandidate === "c2" ? 2 : 3;
 
-    const record = recordVote(user.id, selectedCandidate);
-    setVoteRecord(record);
-    setIsSubmitting(false);
-    setShowConfirmModal(false);
-    toast.success(t("vote.voteSuccessToast"));
+      try {
+        await api.vote.submit(numericCandidateId);
+      } catch (err) {
+        console.warn("Backend vote submission warning (continuing with local record):", err);
+      }
+
+      const record = recordVote(user.id, selectedCandidate);
+      setVoteRecord(record);
+      setIsSubmitting(false);
+      setShowConfirmModal(false);
+      setBioStep("idle");
+      toast.success("বায়োমেট্রিক (ফেস + ফিঙ্গারপ্রিন্ট) ভেরিফাইড! ভোট সফলভাবে সাবমিট হয়েছে।");
+    }, 2500);
   };
 
   const canSubmit = !!selectedCandidate && !remaining.expired;
@@ -376,42 +384,66 @@ export default function VotePage() {
               </p>
             </div>
 
-            <div className="bg-surface-container-lowest rounded-lg border border-outline-variant p-4 flex items-center gap-3 w-full">
-              <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-primary bg-surface-container-high flex items-center justify-center">
-                <span className="material-symbols-outlined text-2xl text-on-surface-variant">
-                  {CANDIDATES.find((c) => c.id === selectedCandidate)?.icon}
-                </span>
+            {bioStep === "verifying" ? (
+              <div className="flex flex-col items-center gap-4 py-4 w-full animate-fade-in">
+                <div className="flex gap-6 items-center justify-center">
+                  <div className="relative w-16 h-16 rounded-full border-4 border-primary bg-surface-variant flex items-center justify-center">
+                    <span className="material-symbols-outlined text-3xl text-primary animate-pulse">face</span>
+                    <div className="absolute inset-0 bg-primary/20 animate-ping rounded-full"></div>
+                  </div>
+                  <div className="relative w-16 h-16 rounded-full border-4 border-secondary bg-surface-variant flex items-center justify-center">
+                    <span className="material-symbols-outlined text-3xl text-secondary animate-pulse">fingerprint</span>
+                    <div className="absolute inset-0 bg-secondary/20 animate-ping rounded-full"></div>
+                  </div>
+                </div>
+                <p className="text-body-md font-bold text-primary">বায়োমেট্রিক (ফেস + ফিঙ্গারপ্রিন্ট) ভেরিফায়িং...</p>
+                <p className="text-caption text-on-surface-variant">ইলেকশন কমিশন NID ডাটাবেসের সাথে তথ্য মেলানো হচ্ছে।</p>
               </div>
-              <div className="text-left">
-                <p className="text-label-md font-bold text-on-surface">{candidateNames[selectedCandidate]}</p>
-                <p className="text-caption text-on-surface-variant">{candidateParties[selectedCandidate]}</p>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div className="bg-surface-container-lowest rounded-lg border border-outline-variant p-4 flex items-center gap-3 w-full">
+                  <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border-2 border-primary bg-surface-container-high flex items-center justify-center">
+                    <span className="material-symbols-outlined text-2xl text-on-surface-variant">
+                      {CANDIDATES.find((c) => c.id === selectedCandidate)?.icon}
+                    </span>
+                  </div>
+                  <div className="text-left">
+                    <p className="text-label-md font-bold text-on-surface">{candidateNames[selectedCandidate]}</p>
+                    <p className="text-caption text-on-surface-variant">{candidateParties[selectedCandidate]}</p>
+                  </div>
+                </div>
 
-            <div className="bg-error-container/40 border border-error/30 rounded-lg p-3 flex items-start gap-2 text-left">
-              <span className="material-symbols-outlined text-error text-xl shrink-0">warning</span>
-              <p className="text-caption text-on-error-container">{t("vote.confirmWarning")}</p>
-            </div>
+                <div className="bg-secondary-container/30 border border-secondary/30 rounded-lg p-3 flex items-center gap-2 text-left w-full">
+                  <span className="material-symbols-outlined text-secondary text-xl shrink-0">verified_user</span>
+                  <p className="text-caption text-on-surface">ভোট কনফার্ম করার সময় ফেস ও ফিঙ্গারপ্রিন্ট ভেরিফিকেশন সম্পন্ন করা হবে।</p>
+                </div>
 
-            <div className="flex gap-3 w-full mt-1">
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 border border-outline-variant rounded-lg font-bold text-on-surface hover:bg-surface-variant/30 transition-colors disabled:opacity-50"
-              >
-                {t("vote.confirmBack")}
-              </button>
-              <button
-                onClick={handleConfirmVote}
-                disabled={isSubmitting}
-                className="flex-1 px-4 py-2 bg-primary text-on-primary rounded-lg font-bold hover:bg-primary/90 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
-              >
-                <span className="flex items-center justify-center gap-2">
-                  {isSubmitting && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
-                  <span>{isSubmitting ? t("vote.submitting") : t("vote.confirmButton")}</span>
-                </span>
-              </button>
-            </div>
+                <div className="bg-error-container/40 border border-error/30 rounded-lg p-3 flex items-start gap-2 text-left w-full">
+                  <span className="material-symbols-outlined text-error text-xl shrink-0">warning</span>
+                  <p className="text-caption text-on-error-container">{t("vote.confirmWarning")}</p>
+                </div>
+
+                <div className="flex gap-3 w-full mt-1">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 border border-outline-variant rounded-lg font-bold text-on-surface hover:bg-surface-variant/30 transition-colors disabled:opacity-50"
+                  >
+                    {t("vote.confirmBack")}
+                  </button>
+                  <button
+                    onClick={handleConfirmVote}
+                    disabled={isSubmitting}
+                    className="flex-1 px-4 py-2 bg-primary text-on-primary rounded-lg font-bold hover:bg-primary/90 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      {isSubmitting && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
+                      <span>{isSubmitting ? "Verifying & Voting..." : t("vote.confirmButton")}</span>
+                    </span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

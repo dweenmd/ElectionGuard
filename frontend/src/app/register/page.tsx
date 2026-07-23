@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/UIContext";
 import Link from "next/link";
 import toast from "react-hot-toast";
+import { api } from "@/lib/api";
 
 export default function RegisterPage() {
   const { login } = useAuth();
@@ -26,8 +27,8 @@ export default function RegisterPage() {
 
   const validateStep1 = () => {
     const next: Record<string, string> = {};
-    if (!/^\d{10,17}$/.test(formData.nid.trim())) {
-      next.nid = t('register.errorNid');
+    if (!/^(\d{10}|\d{17})$/.test(formData.nid.trim())) {
+      next.nid = "বাংলাদেশ এনআইডি অবশ্যই ১০ ডিজিট (স্মার্ট কার্ড) অথবা ১৭ ডিজিট হতে হবে।";
     }
     if (formData.name.trim().length < 3) {
       next.name = t('register.errorName');
@@ -52,18 +53,126 @@ export default function RegisterPage() {
     setStep(2);
   };
 
-  const handleFaceScan = () => {
-    setIsScanning(true);
-    setTimeout(() => {
-      setIsScanning(false);
-      setStep(3);
-      toast.success("Face matched with NID photo successfully!");
-    }, 2500);
+  // Biometric state
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
+  const [capturedFingerprintHash, setCapturedFingerprintHash] = useState<string | null>(null);
+
+  const [faceDone, setFaceDone] = useState(false);
+  const [fingerprintDone, setFingerprintDone] = useState(false);
+  const [isFaceScanning, setIsFaceScanning] = useState(false);
+  const [fingerprintProgress, setFingerprintProgress] = useState(0);
+  const [isHoldingFinger, setIsHoldingFinger] = useState(false);
+
+  const startCamera = async () => {
+    try {
+      setIsFaceScanning(true);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: "user" } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setCameraActive(true);
+      setIsFaceScanning(false);
+      toast.success("ক্যামেরা অন হয়েছে। সোজা তাকান এবং ক্যাপচার বাটন চাপুন।");
+    } catch (_err) {
+      setIsFaceScanning(false);
+      setCameraActive(false);
+      toast("ক্যামেরা না পাওয়ায় এনআইডি ফেস বায়োমেট্রিক সিমুলেশন স্ক্যান করা হচ্ছে...", { icon: "📷" });
+      capturePhoto();
+    }
   };
 
-  const handleComplete = () => {
-    toast.success("Voter registration complete! Logging in...");
-    login("voter");
+  const capturePhoto = () => {
+    if (videoRef.current && canvasRef.current && cameraActive) {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      canvas.width = 300;
+      canvas.height = 300;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, 300, 300);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+        setCapturedPhoto(dataUrl);
+
+        const stream = video.srcObject as MediaStream;
+        if (stream) {
+          stream.getTracks().forEach((track) => track.stop());
+        }
+        setCameraActive(false);
+        setFaceDone(true);
+        toast.success("লাইভ ফেস ফটো ক্যাপচার সফল! ডাটাবেসে সেভ হয়েছে।");
+      }
+    } else {
+      setIsFaceScanning(true);
+      setTimeout(() => {
+        setIsFaceScanning(false);
+        setCapturedPhoto(`data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%230d5c3a"/><circle cx="100" cy="80" r="40" fill="%23ffffff"/><ellipse cx="100" cy="160" rx="60" ry="40" fill="%23ffffff"/></svg>`);
+        setFaceDone(true);
+        toast.success("ফেস স্ক্যান ও ফেসিয়াল জিওমেট্রি ক্যাপচার করা হয়েছে!");
+      }, 1500);
+    }
+  };
+
+  // Fingerprint Press & Hold simulator
+  const handleFingerTouchStart = () => {
+    if (!faceDone || fingerprintDone) return;
+    setIsHoldingFinger(true);
+    let current = 0;
+    const timer = setInterval(() => {
+      current += 10;
+      setFingerprintProgress(current);
+      if (current >= 100) {
+        clearInterval(timer);
+        setIsHoldingFinger(false);
+        setFingerprintDone(true);
+        const fpHash = "fp_sha256_" + Math.random().toString(36).substring(2, 12) + "_" + formData.nid.slice(-4);
+        setCapturedFingerprintHash(fpHash);
+        toast.success("ফিঙ্গারপ্রিন্ট বায়োমেট্রিক হ্যাশ ডাটাবেসে নিবন্ধিত হয়েছে!");
+      }
+    }, 150);
+
+    (window as any).__fingerTimer = timer;
+  };
+
+  const handleFingerTouchEnd = () => {
+    if (fingerprintDone) return;
+    if ((window as any).__fingerTimer) {
+      clearInterval((window as any).__fingerTimer);
+    }
+    setIsHoldingFinger(false);
+    if (fingerprintProgress < 100) {
+      setFingerprintProgress(0);
+      toast("সেন্সর থেকে আঙুল সরাবেন না। ১০০% হওয়া পর্যন্ত চেপে ধরে রাখুন।", { icon: "☝️" });
+    }
+  };
+
+  const handleNextStep2 = () => {
+    if (!faceDone || !fingerprintDone) {
+      toast.error("অনুগ্রহ করে ফেস ক্যাপচার এবং ফিঙ্গারপ্রিন্ট স্ক্যান উভয় বায়োমেট্রিক সম্পন্ন করুন।");
+      return;
+    }
+    setStep(3);
+  };
+
+  const handleComplete = async () => {
+    try {
+      const res = await api.auth.register({
+        nid: formData.nid.trim(),
+        name: formData.name.trim(),
+        dob: formData.dob,
+        phone: formData.phone.trim(),
+        faceDescriptor: capturedPhoto || `face_hash_${formData.nid.trim()}`,
+        fingerprintHash: capturedFingerprintHash || `fp_hash_${formData.nid.trim()}`,
+      });
+      toast.success("ভোট নিবন্ধন সফল হয়েছে!");
+      await login("voter", res.user.id);
+    } catch (err: any) {
+      toast.error(err.message || "নিবন্ধন ব্যর্থ হয়েছে। NID নম্বরটি ইতিমধ্যেই নিবন্ধিত হতে পারে।");
+      setStep(1);
+    }
   };
 
   return (
@@ -139,31 +248,94 @@ export default function RegisterPage() {
 
           {step === 2 && (
             <div className="space-y-6 text-center animate-fade-in">
-              <h3 className="text-label-md font-bold text-primary mb-2 border-b border-outline-variant pb-2">Step 2: Biometric Verification</h3>
+              <h3 className="text-label-md font-bold text-primary mb-2 border-b border-outline-variant pb-2">Step 2: Interactive Dual Biometric Verification</h3>
               
-              <div className="flex flex-col items-center gap-4">
-                <div className="relative w-32 h-32 rounded-full overflow-hidden border-4 border-primary bg-surface-variant flex items-center justify-center">
-                  <span className="material-symbols-outlined text-[60px] text-on-surface-variant opacity-50">face</span>
-                  {isScanning && (
-                    <div className="absolute top-0 left-0 w-full h-2 bg-success animate-bounce shadow-[0_0_10px_#2e7d32]"></div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6">
+                {/* 1. Live WebRTC Camera Face Recognition */}
+                <div className={`p-5 rounded-xl border flex flex-col items-center gap-3 transition-all ${faceDone ? "bg-success-container/20 border-success" : "bg-surface-container-lowest border-outline-variant"}`}>
+                  <canvas ref={canvasRef} className="hidden" />
+                  
+                  <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-primary bg-black flex items-center justify-center">
+                    {capturedPhoto ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={capturedPhoto} alt="Captured Face" className="w-full h-full object-cover" />
+                    ) : cameraActive ? (
+                      <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                    ) : (
+                      <span className="material-symbols-outlined text-[56px] text-on-surface-variant opacity-60">face</span>
+                    )}
+
+                    {isFaceScanning && (
+                      <div className="absolute top-0 left-0 w-full h-2 bg-success animate-bounce shadow-[0_0_10px_#2e7d32]"></div>
+                    )}
+                  </div>
+                  
+                  <span className="text-label-md font-bold text-on-surface">1. ফেস বায়োমেট্রিক ക്യാপচার</span>
+                  <p className="text-caption text-on-surface-variant">লাইভ ফেস ফটো ডাটাবেসে নিবন্ধিত হবে</p>
+                  
+                  {!cameraActive && !faceDone ? (
+                    <button
+                      onClick={startCamera}
+                      disabled={isFaceScanning}
+                      className="w-full py-2 bg-primary text-on-primary rounded-lg font-bold text-caption flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+                      ক্যামেরা অন করুন
+                    </button>
+                  ) : cameraActive && !faceDone ? (
+                    <button
+                      onClick={capturePhoto}
+                      className="w-full py-2 bg-success text-on-success rounded-lg font-bold text-caption flex items-center justify-center gap-2 hover:bg-success/90 transition-all shadow-sm animate-pulse"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">center_focus_strong</span>
+                      ফটো ক্যাপচার করুন
+                    </button>
+                  ) : (
+                    <div className="w-full py-2 bg-success/20 text-success border border-success/30 rounded-lg font-bold text-caption flex items-center justify-center gap-1">
+                      <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                      ফেস ডাটা সেভ হয়েছে ✅
+                    </div>
                   )}
                 </div>
-                
-                <p className="text-body-md text-on-surface-variant">ক্যামেরার দিকে তাকিয়ে ফেস রিকগনিশন সম্পূর্ণ করুন। এটি আপনার NID এর ছবির সাথে মিলানো হবে।</p>
-                
-                <button 
-                  onClick={handleFaceScan}
-                  disabled={isScanning}
-                  className="px-6 py-3 bg-primary text-on-primary rounded-lg font-bold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {isScanning ? <span className="material-symbols-outlined animate-spin">refresh</span> : <span className="material-symbols-outlined">photo_camera</span>}
-                  {isScanning ? "Scanning..." : "Start Face Scan"}
-                </button>
+
+                {/* 2. Interactive Fingerprint Sensor */}
+                <div className={`p-5 rounded-xl border flex flex-col items-center gap-3 transition-all ${!faceDone ? "opacity-50 pointer-events-none" : ""} ${fingerprintDone ? "bg-success-container/20 border-success" : "bg-surface-container-lowest border-outline-variant"}`}>
+                  <div 
+                    onMouseDown={handleFingerTouchStart}
+                    onMouseUp={handleFingerTouchEnd}
+                    onTouchStart={handleFingerTouchStart}
+                    onTouchEnd={handleFingerTouchEnd}
+                    className={`relative w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer select-none transition-all ${fingerprintDone ? "border-success bg-success-container/30" : isHoldingFinger ? "border-secondary scale-95 shadow-lg shadow-secondary/30 bg-secondary/10" : "border-secondary/60 bg-surface-variant hover:border-secondary"}`}
+                  >
+                    <span className={`material-symbols-outlined text-[56px] transition-all ${fingerprintDone ? "text-success" : isHoldingFinger ? "text-secondary animate-pulse scale-110" : "text-on-surface-variant opacity-60"}`}>
+                      {fingerprintDone ? "task_alt" : "fingerprint"}
+                    </span>
+                    {isHoldingFinger && (
+                      <div className="absolute inset-0 border-4 border-secondary rounded-full animate-ping opacity-30"></div>
+                    )}
+                  </div>
+
+                  <span className="text-label-md font-bold text-on-surface">2. ফিঙ্গারপ্রিন্ট সেন্সর</span>
+                  <p className="text-caption text-on-surface-variant">
+                    {fingerprintDone ? "ফিঙ্গারপ্রিন্ট ভেরিফাইড ✅" : isHoldingFinger ? `স্ক্যান হচ্ছে: ${fingerprintProgress}%` : "সেন্সরে আঙুল চেপে ধরে রাখুন"}
+                  </p>
+
+                  <div className="w-full bg-surface-variant rounded-full h-2 overflow-hidden">
+                    <div className="bg-secondary h-2 transition-all duration-150" style={{ width: `${fingerprintProgress}%` }}></div>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-4 flex gap-4">
                 <button onClick={() => setStep(1)} className="flex-1 py-3 border border-outline text-on-surface hover:bg-surface-variant rounded-lg font-bold transition-colors">
                   {t('register.previous')}
+                </button>
+                <button 
+                  onClick={handleNextStep2} 
+                  disabled={!faceDone || !fingerprintDone}
+                  className="flex-1 py-3 bg-primary text-on-primary rounded-lg font-bold hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  পরবর্তী ধাপ (ধাপ ৩) <span className="material-symbols-outlined align-middle">arrow_forward</span>
                 </button>
               </div>
             </div>

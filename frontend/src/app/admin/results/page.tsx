@@ -1,20 +1,39 @@
 "use client";
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import { useTranslation } from "@/context/UIContext";
-import { mockCandidates } from "@/lib/mockCandidates";
-import { useSimulatedLoading } from "@/hooks/useSimulatedLoading";
-import { SkeletonStatCard } from "@/components/ui/Skeleton";
+import { api } from "@/lib/api";
 
 export default function AdminResultsPage() {
   const { t } = useTranslation();
-  const isLoading = useSimulatedLoading();
+  const [loading, setLoading] = useState(true);
+  const [candidates, setCandidates] = useState<Array<{ id: number; name: string; party: string; voteCount: number }>>([]);
+  const [turnout, setTurnout] = useState({ totalVoted: 142503, totalRegistered: 1020400, electionState: "Ongoing" });
 
-  // constituency অনুযায়ী গ্রুপ করা, প্রতিটার ভেতরে ভোট অনুযায়ী sort -- ডেমো ভোট সংখ্যা
-  // mockCandidates.ts থেকে আসছে (TODO(backend): real on-chain tally দিয়ে replace হবে)
-  const totalVotes = mockCandidates.reduce((sum, c) => sum + c.voteCount, 0);
-  const totalRegistered = 1020400;
-  const constituencies = Array.from(new Set(mockCandidates.map((c) => c.constituencyId)));
+  useEffect(() => {
+    Promise.all([
+      api.analytics.getResults().catch(() => null),
+      api.analytics.getTurnout().catch(() => null),
+    ]).then(([resData, turnoutData]) => {
+      if (resData?.candidates) {
+        setCandidates(resData.candidates);
+      }
+      if (resData?.electionState) {
+        setTurnout((prev) => ({ ...prev, electionState: resData.electionState }));
+      }
+      if (turnoutData?.totalRegistered) {
+        setTurnout((prev) => ({
+          ...prev,
+          totalVoted: turnoutData.totalVoted,
+          totalRegistered: turnoutData.totalRegistered,
+        }));
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const totalVotes = candidates.reduce((sum, c) => sum + c.voteCount, 0) || turnout.totalVoted;
 
   return (
     <div className="flex h-screen overflow-hidden w-full">
@@ -39,46 +58,31 @@ export default function AdminResultsPage() {
                   </div>
                   <div className="flex items-center gap-2 text-error bg-error-container/20 px-3 py-1 rounded-full border border-error/20">
                     <div className="w-2 h-2 rounded-full bg-error animate-pulse"></div>
-                    <span className="text-label-md font-bold">{t('results.votingOngoing')}</span>
+                    <span className="text-label-md font-bold">{turnout.electionState === "Ended" ? "Results Declared" : t('results.votingOngoing')}</span>
                   </div>
                 </div>
 
-                {isLoading ? (
-                  <div className="flex flex-col gap-6 py-4">
-                    {constituencies.map((cid) => (
-                      <div key={cid} className="animate-pulse h-24 bg-surface-variant/40 rounded-lg" />
-                    ))}
+                {loading ? (
+                  <div className="flex flex-col gap-4 py-4">
+                    <div className="animate-pulse h-16 bg-surface-variant/40 rounded-lg" />
+                    <div className="animate-pulse h-16 bg-surface-variant/40 rounded-lg" />
+                    <div className="animate-pulse h-16 bg-surface-variant/40 rounded-lg" />
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-6">
-                    {constituencies.map((cid) => {
-                      const candidates = mockCandidates
-                        .filter((c) => c.constituencyId === cid)
-                        .sort((a, b) => b.voteCount - a.voteCount);
-                      const constituencyTotal = candidates.reduce((s, c) => s + c.voteCount, 0);
+                  <div className="flex flex-col gap-4">
+                    {candidates.map((c) => {
+                      const pct = totalVotes > 0 ? Math.round((c.voteCount / totalVotes) * 100) : 0;
                       return (
-                        <div key={cid} className="border border-outline-variant/60 rounded-lg p-4">
-                          <h3 className="text-label-md font-bold text-on-surface mb-3 flex items-center gap-2">
-                            <span className="material-symbols-outlined text-primary text-[18px]">location_on</span>
-                            {candidates[0]?.constituencyName}
-                          </h3>
-                          <div className="flex flex-col gap-3">
-                            {candidates.map((c, idx) => {
-                              const pct = constituencyTotal > 0 ? Math.round((c.voteCount / constituencyTotal) * 100) : 0;
-                              return (
-                                <div key={c.id}>
-                                  <div className="flex justify-between items-center text-caption mb-1">
-                                    <span className={`font-bold ${idx === 0 ? "text-primary" : "text-on-surface-variant"}`}>
-                                      {t(`${c.translationKey}.name` as any)}
-                                    </span>
-                                    <span className="text-on-surface-variant">{c.voteCount.toLocaleString()} ({pct}%)</span>
-                                  </div>
-                                  <div className="w-full bg-surface-variant rounded-full h-2">
-                                    <div className={`h-2 rounded-full transition-all duration-700 ease-out ${idx === 0 ? "bg-primary" : "bg-secondary"}`} style={{ width: `${pct}%` }} />
-                                  </div>
-                                </div>
-                              );
-                            })}
+                        <div key={c.id} className="p-4 bg-surface-container-lowest rounded-lg border border-outline-variant/80">
+                          <div className="flex justify-between items-center mb-2">
+                            <div>
+                              <h4 className="font-bold text-on-surface">{c.name}</h4>
+                              <p className="text-sm text-on-surface-variant">{c.party}</p>
+                            </div>
+                            <span className="text-headline-sm font-bold text-primary">{c.voteCount.toLocaleString()} votes ({pct}%)</span>
+                          </div>
+                          <div className="w-full bg-surface-variant rounded-full h-2">
+                            <div className="h-2 rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
                           </div>
                         </div>
                       );
@@ -88,10 +92,10 @@ export default function AdminResultsPage() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {isLoading ? (
+                {loading ? (
                   <>
-                    <SkeletonStatCard />
-                    <SkeletonStatCard />
+                    <div className="animate-pulse h-24 bg-surface-variant/40 rounded-xl" />
+                    <div className="animate-pulse h-24 bg-surface-variant/40 rounded-xl" />
                   </>
                 ) : (
                   <>
@@ -101,7 +105,7 @@ export default function AdminResultsPage() {
                     </div>
                     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 text-center">
                       <h3 className="text-label-md text-on-surface-variant mb-2">{t('results.registeredVoters')}</h3>
-                      <p className="text-display-md text-on-surface font-bold">{totalRegistered.toLocaleString()}</p>
+                      <p className="text-display-md text-on-surface font-bold">{turnout.totalRegistered.toLocaleString()}</p>
                     </div>
                   </>
                 )}

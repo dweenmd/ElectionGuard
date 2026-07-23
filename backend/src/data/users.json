@@ -1,0 +1,85 @@
+[
+  {
+    "id": "ADM-1001",
+    "nid": "1000000001",
+    "name": "Mohammad Tariqul Islam",
+    "role": "admin",
+    "constituencyId": "ALL",
+    "constituencyName": "All Constituencies"
+  },
+  {
+    "id": "CND-001",
+    "nid": "2000000001",
+    "name": "Dr. Shafiqur Rahman",
+    "role": "candidate",
+    "party": "Green Wave Party",
+    "constituencyId": "dhaka-10",
+    "constituencyName": "Dhaka-10"
+  },
+  {
+    "id": "CND-002",
+    "nid": "2000000002",
+    "name": "Begum Rowshan Ara",
+    "role": "candidate",
+    "party": "Sunrise Alliance",
+    "constituencyId": "chittagong-01",
+    "constituencyName": "Chittagong-01"
+  },
+  {
+    "id": "CND-003",
+    "nid": "2000000003",
+    "name": "Engineer Tanvir Ahmed",
+    "role": "candidate",
+    "party": "River Forum",
+    "constituencyId": "sylhet-01",
+    "constituencyName": "Sylhet-01"
+  },
+  {
+    "id": "VTR-1001",
+    "nid": "1982374011",
+    "name": "Mahmudul Hasan",
+    "role": "voter",
+    "constituencyId": "dhaka-10",
+    "constituencyName": "Dhaka-10"
+  },
+  {
+    "id": "VTR-1002",
+    "nid": "1982374012",
+    "name": "Nusrat Jahan",
+    "role": "voter",
+    "constituencyId": "dhaka-10",
+    "constituencyName": "Dhaka-10"
+  },
+  {
+    "id": "VTR-1003",
+    "nid": "1982374013",
+    "name": "Kamrul Ahsan",
+    "role": "voter",
+    "constituencyId": "chittagong-01",
+    "constituencyName": "Chittagong-01"
+  },
+  {
+    "id": "VTR-1004",
+    "nid": "1982374014",
+    "name": "Farhana Yasmin",
+    "role": "voter",
+    "constituencyId": "chittagong-01",
+    "constituencyName": "Chittagong-01"
+  },
+  {
+    "id": "VTR-1005",
+    "nid": "1982374015",
+    "name": "Rafiqul Islam",
+    "role": "voter",
+    "constituencyId": "sylhet-01",
+    "constituencyName": "Sylhet-01"
+  },
+  {
+    "id": "VTR-1006",
+    "nid": "1982374016",
+    "name": "Sabina Yeasmin",
+    "role": "voter",
+    "constituencyId": "sylhet-01",
+    "constituencyName": "Sylhet-01"
+  }
+]

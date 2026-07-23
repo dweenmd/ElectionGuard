@@ -1,10 +1,12 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { readJson } from "../config/db.js";
+import { readJson, appendToJson } from "../config/db.js";
 import { signToken, requireAuth } from "../middleware/auth.js";
 import type { AuthRequest, AuthPayload } from "../middleware/auth.js";
 
 const router = Router();
+
+const NID_REGEX = /^(\d{10}|\d{17})$/;
 
 interface UserRecord {
   nid?: string;
@@ -23,53 +25,37 @@ router.post("/login", (req: Request, res: Response) => {
       role?: "voter" | "candidate" | "admin";
     };
 
-    const users = readJson<UserRecord[]>("users.json", []);
-    const foundUser = users.find((u) => u.nid === nid);
-
-    let user: {
-      id: string;
-      name: string;
-      constituencyId: string;
-      constituencyName: string;
-    };
-
-    if (foundUser) {
-      user = {
-        id: foundUser.id || foundUser.userId || `V-${nid.slice(-4)}`,
-        name: foundUser.name || `User ${nid.slice(-4)}`,
-        constituencyId: foundUser.constituencyId || "dhaka-10",
-        constituencyName: foundUser.constituencyName || "Dhaka-10",
-      };
-    } else {
-      const last4 = nid.length >= 4 ? nid.slice(-4) : "0000";
-      if (role === "admin") {
-        user = {
-          id: "A123",
-          name: "Election Officer",
-          constituencyId: "ALL",
-          constituencyName: "All Constituencies",
-        };
-      } else if (role === "candidate") {
-        user = {
-          id: "C001",
-          name: "Anisur Rahman",
-          constituencyId: "dhaka-10",
-          constituencyName: "Dhaka-10",
-        };
-      } else {
-        user = {
-          id: "V-" + last4,
-          name: "Voter " + last4,
-          constituencyId: "dhaka-10",
-          constituencyName: "Dhaka-10",
-        };
-      }
+    const trimmedNid = nid.trim();
+    if (trimmedNid && !NID_REGEX.test(trimmedNid)) {
+      res.status(400).json({ error: "Invalid NID format. Bangladesh NID must be either 10 digits (Smart NID) or 17 digits." });
+      return;
     }
+
+    const users = readJson<UserRecord[]>("users.json", []);
+    const foundUser = users.find((u) => u.nid === trimmedNid);
+
+    if (!foundUser) {
+      res.status(401).json({ error: "Unauthorized: Invalid National ID number or account not registered in database." });
+      return;
+    }
+
+    if (foundUser.role && foundUser.role !== role) {
+      res.status(403).json({ error: `Unauthorized: NID ${nid} is registered as ${foundUser.role.toUpperCase()}, not ${role.toUpperCase()}.` });
+      return;
+    }
+
+    const user = {
+      id: foundUser.id || foundUser.userId || `V-${trimmedNid.slice(-4)}`,
+      name: foundUser.name || `User ${trimmedNid.slice(-4)}`,
+      role: foundUser.role || role,
+      constituencyId: foundUser.constituencyId || "dhaka-10",
+      constituencyName: foundUser.constituencyName || "Dhaka-10",
+    };
 
     const payload: AuthPayload = {
       userId: user.id,
       name: user.name,
-      role,
+      role: user.role,
       constituencyId: user.constituencyId,
       constituencyName: user.constituencyName,
     };
@@ -81,13 +67,74 @@ router.post("/login", (req: Request, res: Response) => {
       user: {
         id: user.id,
         name: user.name,
-        role,
+        role: user.role,
         constituencyId: user.constituencyId,
         constituencyName: user.constituencyName,
       },
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Login failed" });
+  }
+});
+
+router.post("/register", (req: Request, res: Response) => {
+  try {
+    const { nid = "", name = "", constituencyId = "dhaka-10", faceDescriptor = "", fingerprintHash = "" } = req.body as {
+      nid?: string;
+      name?: string;
+      constituencyId?: string;
+      faceDescriptor?: string;
+      fingerprintHash?: string;
+    };
+
+    const trimmedNid = nid.trim();
+    if (!NID_REGEX.test(trimmedNid)) {
+      res.status(400).json({ error: "Invalid NID format. Bangladesh NID must be either 10 digits (Smart NID) or 17 digits." });
+      return;
+    }
+
+    const users = readJson<UserRecord[]>("users.json", []);
+    const existing = users.find((u) => u.nid === trimmedNid);
+    if (existing) {
+      res.status(400).json({ error: `NID ${trimmedNid} is already registered in ElectionGuard database. Please login.` });
+      return;
+    }
+
+    const newUser: UserRecord = {
+      id: "VTR-" + trimmedNid.slice(-4),
+      nid: trimmedNid,
+      name: name.trim() || `Voter ${trimmedNid.slice(-4)}`,
+      role: "voter",
+      constituencyId,
+      constituencyName: constituencyId === "chittagong-01" ? "Chittagong-01" : constituencyId === "sylhet-01" ? "Sylhet-01" : "Dhaka-10",
+      faceDescriptor: faceDescriptor || `face_hash_${trimmedNid}`,
+      fingerprintHash: fingerprintHash || `fp_hash_${trimmedNid}`,
+    };
+
+    appendToJson("users.json", newUser);
+
+    const payload: AuthPayload = {
+      userId: newUser.id!,
+      name: newUser.name!,
+      role: "voter",
+      constituencyId: newUser.constituencyId!,
+      constituencyName: newUser.constituencyName!,
+    };
+
+    const token = signToken(payload);
+
+    res.json({
+      token,
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        role: "voter",
+        constituencyId: newUser.constituencyId,
+        constituencyName: newUser.constituencyName,
+      },
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Registration failed" });
   }
 });
 

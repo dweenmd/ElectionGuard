@@ -22,7 +22,7 @@ interface AuthContextType {
   user: User | null;
   role: Role;
   isLoggedIn: boolean;
-  login: (role: Exclude<Role, null>) => void;
+  login: (role: Exclude<Role, null>, nid?: string, password?: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   isElectionStarted: boolean;
@@ -99,10 +99,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = async (role: Exclude<Role, null>) => {
+  const login = async (role: Exclude<Role, null>, nid?: string, _password?: string) => {
     try {
-      // Call backend auth API
-      const res = await api.auth.login(undefined, role);
+      const res = await api.auth.login(nid, role);
       if (res.token) {
         Cookies.set("eg_token", res.token, { expires: 1 });
       }
@@ -115,25 +114,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       };
       setUser(loggedUser);
       Cookies.set("eg_user", JSON.stringify(loggedUser), { expires: 1 });
-    } catch (err) {
-      console.warn("Backend login request failed, using local mock auth", err);
-      const mockUser: User = {
-        id: role === "admin" ? "A123" : role === "candidate" ? "C001" : "V789",
-        name: role === "admin" ? "Election Officer" : role === "candidate" ? "Anisur Rahman" : "Rahim Uddin",
-        role: role,
-        constituencyId: role === "admin" ? "ALL" : "dhaka-10",
-        constituencyName: role === "admin" ? "All Constituencies" : "Dhaka-10",
-      };
-      setUser(mockUser);
-      Cookies.set("eg_user", JSON.stringify(mockUser), { expires: 1 });
+      recordLogin();
+      
+      if (role === "admin") router.push("/admin");
+      else if (role === "candidate") router.push("/candidate");
+      else router.push("/voter");
+    } catch (err: any) {
+      console.error("Backend authentication failed:", err);
+      throw err;
     }
-
-    recordLogin();
-    
-    // Redirect based on role
-    if (role === "admin") router.push("/admin");
-    else if (role === "candidate") router.push("/candidate");
-    else router.push("/voter");
   };
 
   const logout = () => {
