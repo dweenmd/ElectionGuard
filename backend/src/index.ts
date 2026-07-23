@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 
 // Route imports
 import authRoutes from "./routes/auth.js";
+import webauthnRoutes from "./routes/webauthn.js";
 import electionRoutes from "./routes/election.js";
 import candidatesRoutes from "./routes/candidates.js";
 import voteRoutes from "./routes/vote.js";
@@ -36,6 +37,7 @@ app.get("/api/health", (_req, res) => {
 
 // Mount routes
 app.use("/api/auth", authRoutes);
+app.use("/api/webauthn", webauthnRoutes);
 app.use("/api/election", electionRoutes);
 app.use("/api/candidates", candidatesRoutes);
 app.use("/api/vote", voteRoutes);
