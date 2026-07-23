@@ -1,10 +1,11 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/UIContext";
 import Link from "next/link";
 import toast from "react-hot-toast";
 import { api } from "@/lib/api";
+import { startRegistration, browserSupportsWebAuthn } from "@simplewebauthn/browser";
 
 export default function RegisterPage() {
   const { login } = useAuth();
@@ -63,10 +64,16 @@ export default function RegisterPage() {
   const [faceDone, setFaceDone] = useState(false);
   const [fingerprintDone, setFingerprintDone] = useState(false);
   const [isFaceScanning, setIsFaceScanning] = useState(false);
-  const [fingerprintProgress, setFingerprintProgress] = useState(0);
-  const [isHoldingFinger, setIsHoldingFinger] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isFingerprintScanning, setIsFingerprintScanning] = useState(false);
+  const [webauthnSupported, setWebauthnSupported] = useState(true);
+
+  useEffect(() => {
+    setWebauthnSupported(browserSupportsWebAuthn());
+  }, []);
 
   const startCamera = async () => {
+    setCameraError(null);
     try {
       setIsFaceScanning(true);
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: "user" } });
@@ -76,76 +83,85 @@ export default function RegisterPage() {
       }
       setCameraActive(true);
       setIsFaceScanning(false);
-      toast.success("ক্যামেরা অন হয়েছে। সোজা তাকান এবং ক্যাপচার বাটন চাপুন।");
-    } catch (_err) {
+      toast.success("ক্যামেরা অন হয়েছে। সোজা তাকান এবং ক্যাপচার বাটন চাপুন।");
+    } catch (err: any) {
       setIsFaceScanning(false);
       setCameraActive(false);
-      toast("ক্যামেরা না পাওয়ায় এনআইডি ফেস বায়োমেট্রিক সিমুলেশন স্ক্যান করা হচ্ছে...", { icon: "📷" });
-      capturePhoto();
+      // Real, specific reasons instead of silently faking a photo.
+      if (typeof window !== "undefined" && window.location.protocol !== "https:" && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+        setCameraError("ক্যামেরা ব্লক করা হয়েছে কারণ সাইটটি HTTPS বা localhost এ চলছে না। ব্রাউজার নিরাপত্তার কারণে HTTP-তে ক্যামেরা অ্যাক্সেস দেয় না।");
+      } else if (err?.name === "NotAllowedError") {
+        setCameraError("ক্যামেরা পারমিশন দেওয়া হয়নি। ব্রাউজারের অ্যাড্রেস বারের পাশে ক্যামেরা আইকনে ক্লিক করে পারমিশন Allow করুন, তারপর আবার চেষ্টা করুন।");
+      } else if (err?.name === "NotFoundError") {
+        setCameraError("এই ডিভাইসে কোনো ক্যামেরা খুঁজে পাওয়া যায়নি।");
+      } else if (err?.name === "NotReadableError") {
+        setCameraError("ক্যামেরাটি অন্য কোনো অ্যাপ ব্যবহার করছে। অন্য অ্যাপ বন্ধ করে আবার চেষ্টা করুন।");
+      } else {
+        setCameraError(err?.message || "ক্যামেরা চালু করা যায়নি।");
+      }
+      toast.error("ক্যামেরা চালু করা যায়নি।");
     }
   };
 
   const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current && cameraActive) {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      canvas.width = 300;
-      canvas.height = 300;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, 300, 300);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-        setCapturedPhoto(dataUrl);
+    if (!(videoRef.current && canvasRef.current && cameraActive)) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = 300;
+    canvas.height = 300;
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.drawImage(video, 0, 0, 300, 300);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      setCapturedPhoto(dataUrl);
 
-        const stream = video.srcObject as MediaStream;
-        if (stream) {
-          stream.getTracks().forEach((track) => track.stop());
-        }
-        setCameraActive(false);
-        setFaceDone(true);
-        toast.success("লাইভ ফেস ফটো ক্যাপচার সফল! ডাটাবেসে সেভ হয়েছে।");
+      const stream = video.srcObject as MediaStream;
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
       }
-    } else {
-      setIsFaceScanning(true);
-      setTimeout(() => {
-        setIsFaceScanning(false);
-        setCapturedPhoto(`data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="%230d5c3a"/><circle cx="100" cy="80" r="40" fill="%23ffffff"/><ellipse cx="100" cy="160" rx="60" ry="40" fill="%23ffffff"/></svg>`);
-        setFaceDone(true);
-        toast.success("ফেস স্ক্যান ও ফেসিয়াল জিওমেট্রি ক্যাপচার করা হয়েছে!");
-      }, 1500);
+      setCameraActive(false);
+      setFaceDone(true);
+      toast.success("লাইভ ফেস ফটো ক্যাপচার সফল! ডাটাবেসে সেভ হয়েছে।");
     }
   };
 
-  // Fingerprint Press & Hold simulator
-  const handleFingerTouchStart = () => {
-    if (!faceDone || fingerprintDone) return;
-    setIsHoldingFinger(true);
-    let current = 0;
-    const timer = setInterval(() => {
-      current += 10;
-      setFingerprintProgress(current);
-      if (current >= 100) {
-        clearInterval(timer);
-        setIsHoldingFinger(false);
+  // Real fingerprint / device biometric via WebAuthn (Windows Hello, Touch ID,
+  // Android fingerprint sensor). This talks to the device's actual sensor --
+  // browsers never let JS read raw fingerprint image data; WebAuthn is the
+  // real, standard way to use it.
+  const handleFingerprintScan = async () => {
+    if (!faceDone || fingerprintDone || isFingerprintScanning) return;
+    if (!formData.nid.trim()) {
+      toast.error("প্রথমে NID দিন।");
+      return;
+    }
+    if (!webauthnSupported) {
+      toast.error("এই ব্রাউজার/ডিভাইস WebAuthn সমর্থন করে না।");
+      return;
+    }
+
+    setIsFingerprintScanning(true);
+    try {
+      const options = await api.webauthn.registerOptions(formData.nid.trim(), formData.name.trim());
+      // This is what actually triggers the OS-level fingerprint/Face ID prompt.
+      const attestation = await startRegistration({ optionsJSON: options });
+      const result = await api.webauthn.registerVerify(formData.nid.trim(), attestation);
+
+      if (result.verified) {
         setFingerprintDone(true);
-        const fpHash = "fp_sha256_" + Math.random().toString(36).substring(2, 12) + "_" + formData.nid.slice(-4);
-        setCapturedFingerprintHash(fpHash);
-        toast.success("ফিঙ্গারপ্রিন্ট বায়োমেট্রিক হ্যাশ ডাটাবেসে নিবন্ধিত হয়েছে!");
+        setCapturedFingerprintHash(result.credentialId);
+        toast.success("ডিভাইসের বায়োমেট্রিক সেন্সর দিয়ে রিয়েল-টাইম ভেরিফিকেশন সফল হয়েছে!");
       }
-    }, 150);
-
-    (window as any).__fingerTimer = timer;
-  };
-
-  const handleFingerTouchEnd = () => {
-    if (fingerprintDone) return;
-    if ((window as any).__fingerTimer) {
-      clearInterval((window as any).__fingerTimer);
-    }
-    setIsHoldingFinger(false);
-    if (fingerprintProgress < 100) {
-      setFingerprintProgress(0);
-      toast("সেন্সর থেকে আঙুল সরাবেন না। ১০০% হওয়া পর্যন্ত চেপে ধরে রাখুন।", { icon: "☝️" });
+    } catch (err: any) {
+      if (err?.name === "NotAllowedError") {
+        toast.error("বায়োমেট্রিক স্ক্যান বাতিল বা সময়শেষ হয়ে গেছে।");
+      } else if (err?.name === "InvalidStateError") {
+        toast.error("এই ডিভাইসটি ইতিমধ্যে এই NID এর জন্য নিবন্ধিত।");
+      } else {
+        toast.error(err?.message || "বায়োমেট্রিক ভেরিফিকেশন ব্যর্থ হয়েছে।");
+      }
+    } finally {
+      setIsFingerprintScanning(false);
     }
   };
 
@@ -270,17 +286,21 @@ export default function RegisterPage() {
                     )}
                   </div>
                   
-                  <span className="text-label-md font-bold text-on-surface">1. ফেস বায়োমেট্রিক ക്യാপচার</span>
+                  <span className="text-label-md font-bold text-on-surface">1. ফেস বায়োমেট্রিক ক্যাপচার</span>
                   <p className="text-caption text-on-surface-variant">লাইভ ফেস ফটো ডাটাবেসে নিবন্ধিত হবে</p>
-                  
+
+                  {cameraError && !faceDone && (
+                    <p className="text-caption text-error bg-error-container/20 border border-error/30 rounded-lg px-2 py-1">{cameraError}</p>
+                  )}
+
                   {!cameraActive && !faceDone ? (
                     <button
                       onClick={startCamera}
                       disabled={isFaceScanning}
-                      className="w-full py-2 bg-primary text-on-primary rounded-lg font-bold text-caption flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm"
+                      className="w-full py-2 bg-primary text-on-primary rounded-lg font-bold text-caption flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm disabled:opacity-60"
                     >
                       <span className="material-symbols-outlined text-[18px]">photo_camera</span>
-                      ক্যামেরা অন করুন
+                      {isFaceScanning ? "ক্যামেরা চালু হচ্ছে..." : cameraError ? "আবার চেষ্টা করুন" : "ক্যামেরা অন করুন"}
                     </button>
                   ) : cameraActive && !faceDone ? (
                     <button
@@ -293,36 +313,45 @@ export default function RegisterPage() {
                   ) : (
                     <div className="w-full py-2 bg-success/20 text-success border border-success/30 rounded-lg font-bold text-caption flex items-center justify-center gap-1">
                       <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                      ফেস ডাটা সেভ হয়েছে ✅
+                      ফেস ডাটা সেভ হয়েছে ✅
                     </div>
                   )}
                 </div>
 
-                {/* 2. Interactive Fingerprint Sensor */}
+                {/* 2. Real device biometric (fingerprint / Face ID / Windows Hello) via WebAuthn */}
                 <div className={`p-5 rounded-xl border flex flex-col items-center gap-3 transition-all ${!faceDone ? "opacity-50 pointer-events-none" : ""} ${fingerprintDone ? "bg-success-container/20 border-success" : "bg-surface-container-lowest border-outline-variant"}`}>
-                  <div 
-                    onMouseDown={handleFingerTouchStart}
-                    onMouseUp={handleFingerTouchEnd}
-                    onTouchStart={handleFingerTouchStart}
-                    onTouchEnd={handleFingerTouchEnd}
-                    className={`relative w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center cursor-pointer select-none transition-all ${fingerprintDone ? "border-success bg-success-container/30" : isHoldingFinger ? "border-secondary scale-95 shadow-lg shadow-secondary/30 bg-secondary/10" : "border-secondary/60 bg-surface-variant hover:border-secondary"}`}
+                  <div
+                    className={`relative w-28 h-28 rounded-full border-4 flex flex-col items-center justify-center select-none transition-all ${fingerprintDone ? "border-success bg-success-container/30" : isFingerprintScanning ? "border-secondary scale-95 shadow-lg shadow-secondary/30 bg-secondary/10" : "border-secondary/60 bg-surface-variant"}`}
                   >
-                    <span className={`material-symbols-outlined text-[56px] transition-all ${fingerprintDone ? "text-success" : isHoldingFinger ? "text-secondary animate-pulse scale-110" : "text-on-surface-variant opacity-60"}`}>
+                    <span className={`material-symbols-outlined text-[56px] transition-all ${fingerprintDone ? "text-success" : isFingerprintScanning ? "text-secondary animate-pulse scale-110" : "text-on-surface-variant opacity-60"}`}>
                       {fingerprintDone ? "task_alt" : "fingerprint"}
                     </span>
-                    {isHoldingFinger && (
+                    {isFingerprintScanning && (
                       <div className="absolute inset-0 border-4 border-secondary rounded-full animate-ping opacity-30"></div>
                     )}
                   </div>
 
-                  <span className="text-label-md font-bold text-on-surface">2. ফিঙ্গারপ্রিন্ট সেন্সর</span>
+                  <span className="text-label-md font-bold text-on-surface">2. ডিভাইস বায়োমেট্রিক সেন্সর</span>
                   <p className="text-caption text-on-surface-variant">
-                    {fingerprintDone ? "ফিঙ্গারপ্রিন্ট ভেরিফাইড ✅" : isHoldingFinger ? `স্ক্যান হচ্ছে: ${fingerprintProgress}%` : "সেন্সরে আঙুল চেপে ধরে রাখুন"}
+                    {fingerprintDone
+                      ? "বায়োমেট্রিক ভেরিফাইড ✅"
+                      : isFingerprintScanning
+                      ? "ডিভাইসের প্রম্পট দেখুন..."
+                      : webauthnSupported
+                      ? "এই ডিভাইসের ফিঙ্গারপ্রিন্ট/Face ID/Windows Hello ব্যবহার করে ভেরিফাই করুন"
+                      : "এই ব্রাউজার/ডিভাইস সমর্থিত নয়"}
                   </p>
 
-                  <div className="w-full bg-surface-variant rounded-full h-2 overflow-hidden">
-                    <div className="bg-secondary h-2 transition-all duration-150" style={{ width: `${fingerprintProgress}%` }}></div>
-                  </div>
+                  {!fingerprintDone && (
+                    <button
+                      onClick={handleFingerprintScan}
+                      disabled={!faceDone || isFingerprintScanning || !webauthnSupported}
+                      className="w-full py-2 bg-secondary text-on-secondary rounded-lg font-bold text-caption flex items-center justify-center gap-2 hover:bg-secondary/90 transition-all shadow-sm disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">fingerprint</span>
+                      {isFingerprintScanning ? "স্ক্যান হচ্ছে..." : "বায়োমেট্রিক দিয়ে ভেরিফাই করুন"}
+                    </button>
+                  )}
                 </div>
               </div>
 
