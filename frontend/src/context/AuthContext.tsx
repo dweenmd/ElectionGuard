@@ -4,6 +4,7 @@ import Cookies from "js-cookie";
 import { useRouter, usePathname } from "next/navigation";
 import { recordLogin } from "@/lib/loginHistory";
 import { getElectionStatus, setElectionStatus, ELECTION_STATUS_EVENT } from "@/lib/electionStatus";
+import { api } from "@/lib/api";
 
 type Role = "voter" | "candidate" | "admin" | null;
 
@@ -47,13 +48,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Failed to parse user cookie");
       }
     }
-    setIsLoading(false);
+    
+    // Verify token with backend if available
+    const token = Cookies.get("eg_token");
+    if (token) {
+      api.auth.verify()
+        .then((res) => {
+          if (res.user) {
+            const verifiedUser: User = {
+              id: res.user.userId,
+              name: res.user.name,
+              role: res.user.role,
+              constituencyId: res.user.constituencyId,
+              constituencyName: res.user.constituencyName,
+            };
+            setUser(verifiedUser);
+            Cookies.set("eg_user", JSON.stringify(verifiedUser), { expires: 1 });
+          }
+        })
+        .catch((err) => {
+          console.warn("Backend auth verification failed or server offline, using cached session", err);
+        })
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
+    }
   }, []);
 
-  // Election on/off status এখন localStorage-ভিত্তিক (আগে শুধু React state-এ ছিল, তাই admin
-  // চালু করলেও voter/candidate অন্য ট্যাবে বা refresh করার পর সেটা দেখতে পেত না)
+  // Fetch live election status from backend
   useEffect(() => {
-    setIsElectionStarted(getElectionStatus());
+    const fetchBackendStatus = () => {
+      api.election.getStatus()
+        .then((res) => {
+          const active = res.status === "Voting" || res.status === "Ongoing";
+          setIsElectionStarted(active);
+          setElectionStatus(active);
+        })
+        .catch(() => {
+          setIsElectionStarted(getElectionStatus());
+        });
+    };
+
+    fetchBackendStatus();
     const syncStatus = () => setIsElectionStarted(getElectionStatus());
     window.addEventListener("storage", syncStatus);
     window.addEventListener(ELECTION_STATUS_EVENT, syncStatus);
@@ -63,20 +99,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = (role: Exclude<Role, null>) => {
-    // Mock login based on role
-    // constituencyId/Name admin এর জন্য "ALL" (EC সব এলাকা oversee করে);
-    // voter ও candidate কে ইচ্ছাকৃতভাবে একই আসনে (Dhaka-10) রাখা হয়েছে যাতে
-    // feed-এর constituency-scoped visibility ডেমোতে সরাসরি দেখা যায়।
-    const mockUser: User = {
-      id: role === "admin" ? "A123" : role === "candidate" ? "C001" : "V789",
-      name: role === "admin" ? "Election Officer" : role === "candidate" ? "Anisur Rahman" : "Rahim Uddin",
-      role: role,
-      constituencyId: role === "admin" ? "ALL" : "dhaka-10",
-      constituencyName: role === "admin" ? "All Constituencies" : "Dhaka-10",
-    };
-    setUser(mockUser);
-    Cookies.set("eg_user", JSON.stringify(mockUser), { expires: 1 }); // Expires in 1 day
+  const login = async (role: Exclude<Role, null>) => {
+    try {
+      // Call backend auth API
+      const res = await api.auth.login(undefined, role);
+      if (res.token) {
+        Cookies.set("eg_token", res.token, { expires: 1 });
+      }
+      const loggedUser: User = {
+        id: res.user.id,
+        name: res.user.name,
+        role: res.user.role,
+        constituencyId: res.user.constituencyId,
+        constituencyName: res.user.constituencyName,
+      };
+      setUser(loggedUser);
+      Cookies.set("eg_user", JSON.stringify(loggedUser), { expires: 1 });
+    } catch (err) {
+      console.warn("Backend login request failed, using local mock auth", err);
+      const mockUser: User = {
+        id: role === "admin" ? "A123" : role === "candidate" ? "C001" : "V789",
+        name: role === "admin" ? "Election Officer" : role === "candidate" ? "Anisur Rahman" : "Rahim Uddin",
+        role: role,
+        constituencyId: role === "admin" ? "ALL" : "dhaka-10",
+        constituencyName: role === "admin" ? "All Constituencies" : "Dhaka-10",
+      };
+      setUser(mockUser);
+      Cookies.set("eg_user", JSON.stringify(mockUser), { expires: 1 });
+    }
+
     recordLogin();
     
     // Redirect based on role
@@ -88,15 +139,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setUser(null);
     Cookies.remove("eg_user");
+    Cookies.remove("eg_token");
     router.push("/");
   };
 
-  const toggleElection = () => {
-    setIsElectionStarted((prev) => {
-      const next = !prev;
-      setElectionStatus(next);
-      return next;
-    });
+  const toggleElection = async () => {
+    const next = !isElectionStarted;
+    setIsElectionStarted(next);
+    setElectionStatus(next);
+
+    try {
+      await api.election.toggleStatus(next ? "start" : "end");
+    } catch (err) {
+      console.warn("Backend status update failed, state kept locally", err);
+    }
   };
 
   return (

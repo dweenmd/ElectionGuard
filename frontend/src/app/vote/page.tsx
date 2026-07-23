@@ -10,6 +10,8 @@ import { useTranslation } from "@/context/UIContext";
 import { ELECTION_END_DATE } from "@/lib/electionConfig";
 import { getVoteRecord, recordVote, VoteRecord } from "@/lib/voteRecord";
 
+import { api } from "@/lib/api";
+
 type CandidateId = "c1" | "c2" | "c3";
 
 // TODO(backend): candidate list এবং icon/party mapping পরে /api/candidates থেকে আসবে।
@@ -50,8 +52,28 @@ export default function VotePage() {
   // Refresh করলেও যাতে দ্বিতীয়বার ভোট দেওয়া না যায়, তাই এই user আগে ভোট দিয়েছে কিনা তা লোড করা হচ্ছে
   useEffect(() => {
     if (!user) return;
-    setVoteRecord(getVoteRecord(user.id));
-    setCheckedExistingVote(true);
+    const localRec = getVoteRecord(user.id);
+    if (localRec) {
+      setVoteRecord(localRec);
+      setCheckedExistingVote(true);
+    } else {
+      api.vote.getStatus()
+        .then((res) => {
+          if (res.hasVoted && res.record) {
+            const numId = res.record.candidateId;
+            const candId: CandidateId = numId === 1 ? "c1" : numId === 2 ? "c2" : "c3";
+            setVoteRecord({
+              candidateId: candId,
+              votedAt: res.record.timestamp,
+              receiptHash: res.record.txHash,
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not fetch vote status from backend", err);
+        })
+        .finally(() => setCheckedExistingVote(true));
+    }
   }, [user]);
 
   // ব্যালট লম্বা হলে scroll করার সময় submit area কখন view-তে আছে তা track করা হচ্ছে,
@@ -104,17 +126,23 @@ export default function VotePage() {
     router.push("/voter");
   };
 
-  const handleConfirmVote = () => {
+  const handleConfirmVote = async () => {
     if (!selectedCandidate || !user) return;
     setIsSubmitting(true);
-    // TODO(backend): এখানে আসল POST /api/vote কল হবে (encrypted ballot পাঠানো হবে)
-    setTimeout(() => {
-      const record = recordVote(user.id, selectedCandidate);
-      setVoteRecord(record);
-      setIsSubmitting(false);
-      setShowConfirmModal(false);
-      toast.success(t("vote.voteSuccessToast"));
-    }, 900);
+
+    const numericCandidateId = selectedCandidate === "c1" ? 1 : selectedCandidate === "c2" ? 2 : 3;
+
+    try {
+      await api.vote.submit(numericCandidateId);
+    } catch (err) {
+      console.warn("Backend vote submission warning (continuing with local record):", err);
+    }
+
+    const record = recordVote(user.id, selectedCandidate);
+    setVoteRecord(record);
+    setIsSubmitting(false);
+    setShowConfirmModal(false);
+    toast.success(t("vote.voteSuccessToast"));
   };
 
   const canSubmit = !!selectedCandidate && !remaining.expired;
@@ -378,8 +406,10 @@ export default function VotePage() {
                 disabled={isSubmitting}
                 className="flex-1 px-4 py-2 bg-primary text-on-primary rounded-lg font-bold hover:bg-primary/90 transition-colors disabled:opacity-70 flex items-center justify-center gap-2"
               >
-                {isSubmitting && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
-                {isSubmitting ? t("vote.submitting") : t("vote.confirmButton")}
+                <span className="flex items-center justify-center gap-2">
+                  {isSubmitting && <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>}
+                  <span>{isSubmitting ? t("vote.submitting") : t("vote.confirmButton")}</span>
+                </span>
               </button>
             </div>
           </div>

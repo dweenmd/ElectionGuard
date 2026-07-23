@@ -5,6 +5,7 @@
 export interface VoteRecord {
   candidateId: string;
   votedAt: string; // ISO timestamp
+  receiptHash?: string;
 }
 
 const KEY_PREFIX = "eg_vote_record_"; // + userId

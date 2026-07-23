@@ -4,12 +4,12 @@ import { useAuth } from "@/context/AuthContext";
 import { seedPosts, seedComments } from "@/lib/mockFeedData";
 import { FeedComment, FeedPost, NewCommentInput, NewPostInput } from "@/types/feed";
 
+import { api } from "@/lib/api";
+
 const POSTS_KEY = "eg_feed_posts";
 const COMMENTS_KEY = "eg_feed_comments";
 
 interface FeedContextType {
-  // এই user-এর জন্য visible post গুলো, ইতিমধ্যে filter+sort করা।
-  // *** এই ফাংশনটাই সেই জায়গা যেটা backend আসলে server-side query দিয়ে replace হবে। ***
   visiblePosts: FeedPost[];
   commentsFor: (postId: string) => FeedComment[];
   addNotice: (input: NewPostInput) => void;
@@ -18,17 +18,15 @@ interface FeedContextType {
   toggleLike: (postId: string) => void;
   reportPost: (postId: string) => void;
   reportComment: (commentId: string) => void;
-  removePost: (postId: string) => void; // admin moderation
-  hideComment: (commentId: string) => void; // admin moderation
+  removePost: (postId: string) => void;
+  hideComment: (commentId: string) => void;
   isLoaded: boolean;
 }
 
 const FeedContext = createContext<FeedContextType | undefined>(undefined);
 
-// localStorage কে এখানে "database" হিসেবে ট্রিট করা হচ্ছে যাতে refresh-এ ডেটা টিকে থাকে।
-// backend বসানোর সময় এই দুই loader ফাংশন + নিচের persist effect-কে fetch('/api/feed') দিয়ে replace করলেই চলবে।
 function loadFromStorage<T>(key: string, fallback: T): T {
-  if (typeof window === "undefined") return fallback; // SSR guard
+  if (typeof window === "undefined") return fallback;
   try {
     const saved = localStorage.getItem(key);
     return saved ? (JSON.parse(saved) as T) : fallback;
@@ -40,12 +38,41 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 
 export function FeedProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  // lazy initializer -> effect-এর ভেতর setState করা লাগছে না, প্রথম render-এই ডেটা রেডি থাকে
   const [posts, setPosts] = useState<FeedPost[]>(() => loadFromStorage(POSTS_KEY, seedPosts));
   const [comments, setComments] = useState<FeedComment[]>(() => loadFromStorage(COMMENTS_KEY, seedComments));
-  // hydration mismatch এড়াতে (server-এ localStorage নাই) -- mounted হওয়ার পরেই "loaded" ধরা হচ্ছে
   const [isLoaded, setIsLoaded] = useState(false);
-  useEffect(() => setIsLoaded(true), []);
+
+  // Fetch backend posts on mount / user change
+  useEffect(() => {
+    setIsLoaded(true);
+    api.feed.getPosts(user?.constituencyId)
+      .then((res) => {
+        if (res.posts && res.posts.length > 0) {
+          const backendPosts: FeedPost[] = res.posts.map((p) => ({
+            id: p.id,
+            type: (p.type === "ec_notice" ? "EC_NOTICE" : "CANDIDATE_POST") as any,
+            author: { id: p.author, name: p.author, role: p.type === "ec_notice" ? "admin" : "candidate" },
+            title: p.content.slice(0, 50),
+            body: p.content,
+            constituencyId: p.constituencyId,
+            pinned: p.type === "ec_notice",
+            status: "PUBLISHED",
+            createdAt: p.createdAt,
+            likedBy: [],
+            reportCount: 0,
+          }));
+
+          setPosts((prev) => {
+            const existingIds = new Set(backendPosts.map((bp) => bp.id));
+            const localOnly = prev.filter((lp) => !existingIds.has(lp.id));
+            return [...backendPosts, ...localOnly];
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("Backend feed fetch failed, using local/cached feed data", err);
+      });
+  }, [user]);
 
   useEffect(() => {
     if (isLoaded) localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
@@ -55,18 +82,11 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     if (isLoaded) localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments));
   }, [comments, isLoaded]);
 
-  // ==== VISIBILITY RULE (মূল লজিক) ====
-  // TODO(backend): এই filtering client-এ রাখা শুধু demo-র জন্য নিরাপদ, কারণ mock data-তে
-  // কোনো sensitive তথ্য নেই। Real backend-এ এই একই rule টা API route-এ
-  // (WHERE constituencyId = session.constituencyId OR type = 'EC_NOTICE') বসবে
-  // এবং client শুধু already-filtered response পাবে -- অন্য এলাকার পোস্ট
-  // network response-এই কখনো আসবে না।
   const getVisiblePosts = useCallback((): FeedPost[] => {
     if (!user) return [];
     const filtered = posts.filter((p) => {
       if (p.status !== "PUBLISHED") return false;
-      if (p.type === "EC_NOTICE") return true; // সবার জন্য visible
-      // CANDIDATE_POST: admin (EC) সব দেখতে পারবে moderation-এর জন্য, বাকিরা শুধু নিজ এলাকারটা
+      if (p.type === "EC_NOTICE") return true;
       if (user.role === "admin") return true;
       return p.constituencyId === user.constituencyId;
     });
@@ -85,8 +105,8 @@ export function FeedProvider({ children }: { children: ReactNode }) {
     [comments]
   );
 
-  const addNotice = (input: NewPostInput) => {
-    if (!user || user.role !== "admin") return; // role গার্ড -- backend-এ middleware দিয়েও একই চেক হবে
+  const addNotice = async (input: NewPostInput) => {
+    if (!user || user.role !== "admin") return;
     const newPost: FeedPost = {
       id: `notice-${Date.now()}`,
       type: "EC_NOTICE",
@@ -100,12 +120,16 @@ export function FeedProvider({ children }: { children: ReactNode }) {
       reportCount: 0,
     };
     setPosts((prev) => [newPost, ...prev]);
+
+    try {
+      await api.feed.createPost(`${input.title}\n\n${input.body}`, "ec_notice");
+    } catch (err) {
+      console.warn("Failed to publish notice to backend API", err);
+    }
   };
 
-  const addCandidatePost = (input: NewPostInput) => {
+  const addCandidatePost = async (input: NewPostInput) => {
     if (!user || user.role !== "candidate") return;
-    // constituencyId সবসময় logged-in user (session) থেকে নেয়া হচ্ছে, input থেকে না --
-    // এইটাই মূল নিরাপত্তা নিয়ম, candidate নিজে অন্য এলাকার id বসাতে পারবে না।
     const newPost: FeedPost = {
       id: `post-${Date.now()}`,
       type: "CANDIDATE_POST",
@@ -121,6 +145,12 @@ export function FeedProvider({ children }: { children: ReactNode }) {
       reportCount: 0,
     };
     setPosts((prev) => [newPost, ...prev]);
+
+    try {
+      await api.feed.createPost(`${input.title}\n\n${input.body}`, "campaign");
+    } catch (err) {
+      console.warn("Failed to publish candidate post to backend API", err);
+    }
   };
 
   const addComment = (input: NewCommentInput) => {

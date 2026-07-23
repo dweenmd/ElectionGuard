@@ -1,15 +1,30 @@
 "use client";
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { useAuth } from "@/context/AuthContext";
 import { useTranslation } from "@/context/UIContext";
 import { getPollingCentersByConstituency } from "@/lib/mockPollingCenters";
+import { api } from "@/lib/api";
 
 function PollingCenterContent() {
   const { user } = useAuth();
   const { t } = useTranslation();
-  const centers = user ? getPollingCentersByConstituency(user.constituencyId) : [];
+  const [centers, setCenters] = useState(() => (user ? getPollingCentersByConstituency(user.constituencyId) : []));
+
+  useEffect(() => {
+    if (!user) return;
+    api.pollingCenters.getAll(user.constituencyId)
+      .then((res) => {
+        if (res.pollingCenters && res.pollingCenters.length > 0) {
+          setCenters(res.pollingCenters as any);
+        }
+      })
+      .catch((err) => {
+        console.warn("Could not fetch polling centers from backend API, using local mock data", err);
+      });
+  }, [user]);
 
   return (
     <div className="flex h-screen overflow-hidden w-full">

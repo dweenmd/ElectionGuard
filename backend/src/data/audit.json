@@ -1,0 +1,37 @@
+[
+  {
+    "id": "log-1784826352727-ick2l",
+    "actor": "Election Officer",
+    "action": "Election Started",
+    "details": "Voting was opened platform-wide for all voters and candidates",
+    "createdAt": "2026-07-23T17:05:52.727Z"
+  },
+  {
+    "id": "log-1784826294016-3rw7j",
+    "actor": "Election Officer",
+    "action": "Results Published",
+    "details": "Election results published to public portal",
+    "createdAt": "2026-07-23T17:04:54.016Z"
+  },
+  {
+    "id": "log-1784826260957-p9uhu",
+    "actor": "Election Officer",
+    "action": "Election Started",
+    "details": "Voting was opened platform-wide for all voters and candidates",
+    "createdAt": "2026-07-23T17:04:20.957Z"
+  },
+  {
+    "id": "log-1784826084179-um9pw",
+    "actor": "Election Officer",
+    "action": "Election Started",
+    "details": "Voting was opened platform-wide for all voters and candidates",
+    "createdAt": "2026-07-23T17:01:24.179Z"
+  },
+  {
+    "id": "log-1784825553246-33jmt",
+    "actor": "Election Officer",
+    "action": "Grievance Status Updated",
+    "details": "GRV-001 (Rahim Uddin) → REVIEWING",
+    "createdAt": "2026-07-23T16:52:33.247Z"
+  }
+]

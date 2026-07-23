@@ -1,0 +1,11 @@
+[
+  {
+    "id": "GRV-001",
+    "voterId": "V789",
+    "voterName": "Rahim Uddin",
+    "category": "Polling Center Issue",
+    "description": "Long queue at Dhaka-10 center",
+    "status": "reviewing",
+    "createdAt": "2026-08-15T09:30:00Z"
+  }
+]

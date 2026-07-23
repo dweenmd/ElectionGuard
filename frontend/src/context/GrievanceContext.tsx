@@ -2,12 +2,13 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { seedGrievances } from "@/lib/mockGrievanceData";
-import { Grievance, GrievanceStatus, NewGrievanceInput } from "@/types/grievance";
+import { Grievance, GrievanceCategory, GrievanceStatus, NewGrievanceInput } from "@/types/grievance";
+
+import { api } from "@/lib/api";
 
 const KEY = "eg_grievances";
 
 interface GrievanceContextType {
-  // voter হলে শুধু নিজের অভিযোগ, admin হলে সবগুলো -- এই ভাগাভাগিও backend-এ session অনুযায়ী হবে।
   myGrievances: Grievance[];
   allGrievances: Grievance[];
   addGrievance: (input: NewGrievanceInput) => void;
@@ -32,13 +33,48 @@ export function GrievanceProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [grievances, setGrievances] = useState<Grievance[]>(() => loadFromStorage());
   const [isLoaded, setIsLoaded] = useState(false);
-  useEffect(() => setIsLoaded(true), []);
+
+  useEffect(() => {
+    setIsLoaded(true);
+    if (user) {
+      api.grievances.getAll()
+        .then((res) => {
+          if (res.grievances) {
+            const validCategories = ["MISCONDUCT", "FRAUD", "TECHNICAL", "HARASSMENT", "OTHER"];
+            const mapped: Grievance[] = res.grievances.map((g) => {
+              const catUpper = g.category ? g.category.toUpperCase() : "OTHER";
+              const category: GrievanceCategory = (validCategories.includes(catUpper) ? catUpper : "OTHER") as GrievanceCategory;
+              return {
+                id: g.id,
+                voterId: g.voterId,
+                voterName: g.voterName,
+                constituencyId: user.constituencyId,
+                constituencyName: user.constituencyName,
+                category,
+                description: g.description,
+                status: (g.status.toUpperCase() === "OPEN" ? "PENDING" : g.status.toUpperCase()) as GrievanceStatus,
+                createdAt: g.createdAt,
+              };
+            });
+
+            setGrievances((prev) => {
+              const existingIds = new Set(mapped.map((mg) => mg.id));
+              const localOnly = prev.filter((pg) => !existingIds.has(pg.id));
+              return [...mapped, ...localOnly];
+            });
+          }
+        })
+        .catch((err) => {
+          console.warn("Backend grievance fetch failed, using local/cached data", err);
+        });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (isLoaded) localStorage.setItem(KEY, JSON.stringify(grievances));
   }, [grievances, isLoaded]);
 
-  const addGrievance = (input: NewGrievanceInput) => {
+  const addGrievance = async (input: NewGrievanceInput) => {
     if (!user || user.role !== "voter") return;
     const newGrievance: Grievance = {
       id: `g-${Date.now()}`,
@@ -52,11 +88,23 @@ export function GrievanceProvider({ children }: { children: ReactNode }) {
       createdAt: new Date().toISOString(),
     };
     setGrievances((prev) => [newGrievance, ...prev]);
+
+    try {
+      await api.grievances.create(input.category, input.description);
+    } catch (err) {
+      console.warn("Failed to create grievance on backend API", err);
+    }
   };
 
-  const updateStatus = (id: string, status: GrievanceStatus, adminResponse?: string) => {
-    if (!user || user.role !== "admin") return; // moderation শুধু EC/admin-এর হাতে
+  const updateStatus = async (id: string, status: GrievanceStatus, adminResponse?: string) => {
+    if (!user || user.role !== "admin") return;
     setGrievances((prev) => prev.map((g) => (g.id === id ? { ...g, status, adminResponse: adminResponse ?? g.adminResponse } : g)));
+
+    try {
+      await api.grievances.updateStatus(id, status.toLowerCase());
+    } catch (err) {
+      console.warn("Failed to update grievance status on backend API", err);
+    }
   };
 
   const myGrievances = user ? grievances.filter((g) => g.voterId === user.id) : [];

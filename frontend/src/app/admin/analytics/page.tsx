@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -6,13 +7,27 @@ import { useTranslation } from "@/context/UIContext";
 import { mockTurnout } from "@/lib/mockTurnout";
 import { useSimulatedLoading } from "@/hooks/useSimulatedLoading";
 import { SkeletonStatCard } from "@/components/ui/Skeleton";
+import { api } from "@/lib/api";
 
 function AnalyticsContent() {
   const { t } = useTranslation();
   const isLoading = useSimulatedLoading();
+  const [turnoutData, setTurnoutData] = useState(() => mockTurnout);
 
-  const totalRegistered = mockTurnout.reduce((s, r) => s + r.registered, 0);
-  const totalVoted = mockTurnout.reduce((s, r) => s + r.voted, 0);
+  useEffect(() => {
+    api.analytics.getTurnout()
+      .then((data) => {
+        if (data.constituencies && data.constituencies.length > 0) {
+          setTurnoutData(data.constituencies);
+        }
+      })
+      .catch((err) => {
+        console.warn("Analytics turnout API fetch failed, fallback to mock data", err);
+      });
+  }, []);
+
+  const totalRegistered = turnoutData.reduce((s, r) => s + r.registered, 0);
+  const totalVoted = turnoutData.reduce((s, r) => s + r.voted, 0);
   const overallPct = totalRegistered > 0 ? Math.round((totalVoted / totalRegistered) * 100) : 0;
 
   return (
@@ -60,7 +75,7 @@ function AnalyticsContent() {
               </div>
             ) : (
               <div className="flex flex-col gap-6">
-                {mockTurnout.map((row) => {
+                {turnoutData.map((row) => {
                   const pct = row.registered > 0 ? Math.round((row.voted / row.registered) * 100) : 0;
                   return (
                     <div key={row.constituencyId}>

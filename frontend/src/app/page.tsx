@@ -6,12 +6,16 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { useUI } from "@/context/UIContext";
 
+import { useAccessibility } from "@/context/AccessibilityContext";
+
 export default function Home() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
   const { language, setLanguage } = useUI();
+  const { fontScale, setFontScale, highContrast, toggleHighContrast } = useAccessibility();
   const [mounted, setMounted] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [a11yOpen, setA11yOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -26,56 +30,95 @@ export default function Home() {
             <span className="material-symbols-outlined text-3xl">how_to_vote</span>
             <span className="text-headline-md font-bold tracking-tight">ElectionGuard</span>
           </div>
-          <nav className="hidden md:flex items-center gap-6">
-            
-            {mounted && (
-              <button 
-                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-colors rounded-full flex items-center justify-center" 
-                title="Toggle Theme"
-              >
-                <span className="material-symbols-outlined text-[20px]">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
-              </button>
-            )}
 
-            {mounted && (
-              <div className="relative">
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Utility Icons: Accessibility, Theme, Language */}
+            <div className="flex items-center gap-1 md:gap-2">
+              {mounted && (
+                <div className="relative">
+                  <button
+                    onClick={() => setA11yOpen(!a11yOpen)}
+                    className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-colors rounded-full flex items-center justify-center"
+                    title="Accessibility"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">accessibility_new</span>
+                  </button>
+                  {a11yOpen && (
+                    <div className="absolute top-full mt-2 right-0 bg-surface rounded-xl shadow-card border border-outline-variant py-3 px-4 w-64 z-50 flex flex-col gap-3 animate-dropdown">
+                      <div>
+                        <p className="text-label-md font-bold text-on-surface mb-2">{t('accessibility.fontSize')}</p>
+                        <div className="flex gap-2">
+                          {[100, 115, 130].map((s) => (
+                            <button
+                              key={s}
+                              onClick={() => setFontScale(s as 100 | 115 | 130)}
+                              className={`flex-1 py-1.5 rounded-lg border text-label-sm font-bold transition-colors ${fontScale === s ? "bg-primary text-on-primary border-primary" : "bg-surface-container-lowest text-on-surface border-outline-variant"}`}
+                            >
+                              {s}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <label className="flex items-center justify-between cursor-pointer">
+                        <span className="text-label-md font-bold text-on-surface">{t('accessibility.highContrast')}</span>
+                        <input type="checkbox" checked={highContrast} onChange={toggleHighContrast} className="accent-primary w-4 h-4" />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {mounted && (
                 <button 
-                  onClick={() => setLangMenuOpen(!langMenuOpen)}
-                  className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-colors rounded-full flex items-center justify-center gap-1" 
-                  title={t('common.changeLanguage')}
+                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-colors rounded-full flex items-center justify-center" 
+                  title="Toggle Theme"
                 >
-                  <span className="material-symbols-outlined text-[20px]">language</span>
-                  <span className="text-xs font-bold uppercase">{language}</span>
+                  <span className="material-symbols-outlined text-[20px]">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
                 </button>
-                
-                {langMenuOpen && (
-                  <div className="absolute top-full mt-2 right-0 bg-surface rounded-xl shadow-card border border-outline-variant py-2 w-32 z-50">
-                    <button 
-                      onClick={() => { setLanguage('bn'); setLangMenuOpen(false); }}
-                      className={`w-full text-left px-4 py-2 text-label-md hover:bg-surface-variant transition-colors ${language === 'bn' ? 'text-primary font-bold bg-primary/5' : 'text-on-surface'}`}
-                    >
-                      বাংলা
-                    </button>
-                    <button 
-                      onClick={() => { setLanguage('en'); setLangMenuOpen(false); }}
-                      className={`w-full text-left px-4 py-2 text-label-md hover:bg-surface-variant transition-colors ${language === 'en' ? 'text-primary font-bold bg-primary/5' : 'text-on-surface'}`}
-                    >
-                      English
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+              )}
 
-            <Link href="/results" className="text-label-md font-bold text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1">
-              <span className="material-symbols-outlined text-[18px]">bar_chart</span> {t('common.results')}
-            </Link>
-            
-            <Link href="/login" className="px-6 py-2.5 bg-primary text-on-primary rounded-lg text-label-md font-bold hover:bg-primary/90 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5">
-              {t('nav.loginPortal')}
-            </Link>
-          </nav>
+              {mounted && (
+                <div className="relative">
+                  <button 
+                    onClick={() => setLangMenuOpen(!langMenuOpen)}
+                    className="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 transition-colors rounded-full flex items-center justify-center gap-1" 
+                    title={t('common.changeLanguage')}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">language</span>
+                    <span className="text-xs font-bold uppercase">{language}</span>
+                  </button>
+                  
+                  {langMenuOpen && (
+                    <div className="absolute top-full mt-2 right-0 bg-surface rounded-xl shadow-card border border-outline-variant py-2 w-32 z-50">
+                      <button 
+                        onClick={() => { setLanguage('bn'); setLangMenuOpen(false); }}
+                        className={`w-full text-left px-4 py-2 text-label-md hover:bg-surface-variant transition-colors ${language === 'bn' ? 'text-primary font-bold bg-primary/5' : 'text-on-surface'}`}
+                      >
+                        বাংলা
+                      </button>
+                      <button 
+                        onClick={() => { setLanguage('en'); setLangMenuOpen(false); }}
+                        className={`w-full text-left px-4 py-2 text-label-md hover:bg-surface-variant transition-colors ${language === 'en' ? 'text-primary font-bold bg-primary/5' : 'text-on-surface'}`}
+                      >
+                        English
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <nav className="flex items-center gap-3 md:gap-6">
+              <Link href="/results" className="hidden sm:flex text-label-md font-bold text-on-surface-variant hover:text-primary transition-colors items-center gap-1">
+                <span className="material-symbols-outlined text-[18px]">bar_chart</span> {t('common.results')}
+              </Link>
+              
+              <Link href="/login" className="px-4 py-2 md:px-6 md:py-2.5 bg-primary text-on-primary rounded-lg text-label-md font-bold hover:bg-primary/90 transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5">
+                {t('nav.loginPortal')}
+              </Link>
+            </nav>
+          </div>
         </div>
       </header>
 

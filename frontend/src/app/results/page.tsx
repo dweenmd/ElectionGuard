@@ -1,10 +1,43 @@
 "use client";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useTranslation } from "@/context/UIContext";
+import { api } from "@/lib/api";
 
 export default function ResultsPage() {
   const { t } = useTranslation();
+  const [stats, setStats] = useState({ totalVotes: 142503, totalRegistered: 1020400, electionState: "Voting" });
+  const [candidates, setCandidates] = useState<Array<{ id: number; name: string; party: string; voteCount: number }>>([]);
+
+  useEffect(() => {
+    api.analytics.getTurnout()
+      .then((data) => {
+        if (data.totalRegistered) {
+          setStats((prev) => ({
+            ...prev,
+            totalVotes: data.totalVoted,
+            totalRegistered: data.totalRegistered,
+          }));
+        }
+      })
+      .catch((err) => {
+        console.warn("Turnout API fetch failed, fallback to default", err);
+      });
+
+    api.analytics.getResults()
+      .then((data) => {
+        if (data.candidates) {
+          setCandidates(data.candidates);
+        }
+        if (data.electionState) {
+          setStats((prev) => ({ ...prev, electionState: data.electionState }));
+        }
+      })
+      .catch((err) => {
+        console.warn("Results API fetch failed, fallback to default", err);
+      });
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-surface">
@@ -44,24 +77,38 @@ export default function ResultsPage() {
                 </div>
                 <div className="flex items-center gap-2 text-error bg-error-container/20 px-3 py-1 rounded-full border border-error/20">
                   <div className="w-2 h-2 rounded-full bg-error animate-pulse"></div>
-                  <span className="text-label-md font-bold">{t('results.votingOngoing')}</span>
+                  <span className="text-label-md font-bold">{stats.electionState === "Ended" ? "Results Declared" : t('results.votingOngoing')}</span>
                 </div>
               </div>
 
-              <div className="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
-                <span className="material-symbols-outlined text-[60px] opacity-50 mb-4">pending</span>
-                <p className="text-body-lg">{t('results.resultsAfter')}</p>
-              </div>
+              {candidates.length > 0 ? (
+                <div className="flex flex-col gap-4">
+                  {candidates.map((c) => (
+                    <div key={c.id} className="p-4 bg-surface-container-lowest rounded-lg border border-outline-variant flex justify-between items-center">
+                      <div>
+                        <h4 className="font-bold text-on-surface">{c.name}</h4>
+                        <p className="text-sm text-on-surface-variant">{c.party}</p>
+                      </div>
+                      <span className="text-headline-sm font-bold text-primary">{c.voteCount.toLocaleString()} votes</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[60px] opacity-50 mb-4">pending</span>
+                  <p className="text-body-lg">{t('results.resultsAfter')}</p>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 text-center">
                 <h3 className="text-label-md text-on-surface-variant mb-2">{t('results.currentVotes')}</h3>
-                <p className="text-display-md text-primary font-bold">142,503</p>
+                <p className="text-display-md text-primary font-bold">{stats.totalVotes.toLocaleString()}</p>
               </div>
               <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 text-center">
                 <h3 className="text-label-md text-on-surface-variant mb-2">{t('results.registeredVoters')}</h3>
-                <p className="text-display-md text-on-surface font-bold">1,020,400</p>
+                <p className="text-display-md text-on-surface font-bold">{stats.totalRegistered.toLocaleString()}</p>
               </div>
             </div>
           </div>
