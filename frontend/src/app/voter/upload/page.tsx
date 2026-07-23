@@ -44,10 +44,10 @@ export default function UploadPage() {
 
             {/* Submit */}
             <div className="flex justify-end gap-4">
-              <Link href="/voter" className="border border-outline text-primary text-label-md px-6 py-3 rounded hover:bg-surface-container transition-colors">
+              <Link href="/voter" className="border border-outline text-primary text-label-md px-6 py-3 rounded-lg hover:bg-surface-container transition-colors">
                 বাতিল
               </Link>
-              <button className="bg-primary text-on-primary text-label-md px-6 py-3 rounded hover:bg-primary/90 transition-colors shadow-sm">
+              <button className="bg-primary text-on-primary text-label-md px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors shadow-sm">
                 ডকুমেন্ট জমা দিন
               </button>
             </div>

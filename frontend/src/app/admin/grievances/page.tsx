@@ -76,6 +76,7 @@ function AdminGrievanceContent() {
       filtered.map((g) => [g.id, g.voterName, g.constituencyName, g.category, g.status, g.description, g.createdAt])
     );
     logAction("Exported Grievance List", `${filtered.length} grievances exported as CSV`);
+    toast.success(t('admin.exportSuccess'));
   };
 
   return (

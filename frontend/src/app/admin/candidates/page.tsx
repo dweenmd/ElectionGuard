@@ -48,6 +48,7 @@ export default function AdminCandidatesPage() {
       candidates.map((c) => [c.id, t(`${c.translationKey}.name` as any), t(`${c.translationKey}.party` as any), c.constituencyName, c.docStatusKey, c.nominationStatusKey])
     );
     logAction("Exported Candidate List", `${candidates.length} candidates exported as CSV`);
+    toast.success(t('admin.exportSuccess'));
   };
 
   return (

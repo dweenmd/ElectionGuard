@@ -31,6 +31,7 @@ export const en = {
     voterSlip: "Voter Slip",
     auditLog: "Audit Log",
     analytics: "Turnout Analytics",
+    electionControl: "Election Control",
     loading: "Loading..."
   },
   nav: {
@@ -68,7 +69,8 @@ export const en = {
     forgotPassword: "Forgot password?",
     newVoter: "Don't have an account? Register",
     errorNid: "Enter a valid National ID (10-17 digits).",
-    errorPassword: "Password must be at least 6 characters."
+    errorPassword: "Password must be at least 6 characters.",
+    successToast: "Login successful! Redirecting..."
   },
   register: {
     title: "Voter Registration",
@@ -132,11 +134,26 @@ export const en = {
     returnDashboard: "Return to Dashboard",
     title: "Digital Ballot Paper",
     subtitle: "National Election 2026 - Dhaka 10 Constituency",
-    timeRemaining: "Time Remaining: 04 Hours 15 Minutes",
+    timeRemaining: "Time Remaining",
+    votingClosedShort: "Voting has closed",
     instructions: "Voting Rules",
     instructionsDesc: "Select your preferred candidate from the list below. You can only vote once, and the vote cannot be changed once submitted.",
     encrypted: "Your vote will be encrypted using 256-bit cryptography.",
-    submitVote: "Cast Vote"
+    submitVote: "Cast Vote",
+    selectCandidateHint: "Select a candidate above to enable submission",
+    confirmTitle: "Confirm Your Vote",
+    confirmDesc: "You are about to vote for {name}. This choice cannot be changed once submitted.",
+    confirmWarning: "This action is irreversible. Please review your selection carefully before confirming.",
+    confirmButton: "Yes, Cast My Vote",
+    confirmBack: "Go Back & Review",
+    currentlySelected: "Currently selected",
+    reviewSubmit: "Review & Submit",
+    submitting: "Submitting...",
+    voteSuccessToast: "Your vote has been submitted successfully!",
+    alreadyVotedTitle: "Your Vote Has Been Recorded",
+    alreadyVotedDesc: "Thank you for participating. You voted for:",
+    alreadyVotedNote: "Each voter may cast only one vote. Your ballot is final and cannot be changed.",
+    votedAtLabel: "Submitted at"
   },
   admin: {
     title: "Admin Dashboard",
@@ -144,6 +161,7 @@ export const en = {
     totalVoters: "Total Registered Voters",
     activeElections: "Active Elections",
     publishResults: "Publish Results",
+    resultsPublished: "Results published successfully",
     systemHealth: "System Health",
     uptime: "Uptime",
     voterManagement: "Voter List Management",
@@ -178,6 +196,7 @@ export const en = {
     allCandidates: "All Candidates",
     searchCandidate: "Search candidate...",
     exportCsv: "Export CSV",
+    exportSuccess: "CSV file downloaded successfully",
     actionApproved: "Candidate approved",
     actionRejected: "Candidate rejected",
     id: "ID",
@@ -189,6 +208,26 @@ export const en = {
     underReview: "Under Review",
     accepted: "Accepted",
     rejected: "Rejected"
+  },
+  electionControl: {
+    title: "Election Control",
+    subtitle: "Start or stop voting access for every voter and candidate on the platform.",
+    statusActive: "Voting is currently ACTIVE",
+    statusInactive: "Voting is currently CLOSED",
+    statusActiveDesc: "Voters and candidates can open the digital ballot and cast their vote right now.",
+    statusInactiveDesc: "The ballot is locked. Voters and candidates cannot cast votes until you start the election.",
+    startButton: "Start Election / Open Voting",
+    stopButton: "Stop Election / Close Voting",
+    confirmStartTitle: "Start the Election?",
+    confirmStartDesc: "This will immediately open the digital ballot for every registered voter and candidate on the platform.",
+    confirmStopTitle: "Stop the Election?",
+    confirmStopDesc: "This will immediately lock the digital ballot. Voters who haven't cast their vote yet will no longer be able to access it.",
+    confirmProceedStart: "Yes, Start Voting",
+    confirmProceedStop: "Yes, Stop Voting",
+    scheduledWindow: "Scheduled Voting Window",
+    scheduledWindowNote: "This is a reference schedule only — voting opens and closes exactly when you toggle it here, not automatically by the clock.",
+    startedToast: "Election started — voting is now open to all voters and candidates.",
+    stoppedToast: "Election stopped — the ballot has been locked."
   },
   candidatesData: {
     c1: {
@@ -370,12 +409,22 @@ export const en = {
     subtitle: "Common questions about voting, registration, and the platform.",
     stillNeedHelp: "Still need help?",
     contactDesc: "Contact the Election Commission helpdesk at 16222 (toll-free).",
+    voterSection: "For Voters",
+    candidateSection: "For Candidates",
+    adminSection: "For Election Officers",
+    generalSection: "General",
     q1: { q: "How do I register as a voter?", a: "Go to the Register page, fill in your NID, date of birth and phone number, then complete face verification. Your account is created once verification succeeds." },
     q2: { q: "How do I cast my vote?", a: "Once voting opens, go to Vote from your dashboard, select your preferred candidate on the digital ballot, and confirm. You'll receive a tracking ID for verification." },
     q3: { q: "Can I see candidates outside my constituency?", a: "You can only see and vote for candidates registered in your own constituency. This matches how the Election Commission assigns candidates to areas." },
     q4: { q: "What if I forgot my password?", a: "Use the 'Forgot password?' link on the login page. This feature will be fully enabled once SMS/Email services are integrated." },
     q5: { q: "How do I report an election irregularity?", a: "Go to Complaints from your dashboard, choose a category, and describe the issue. The Election Commission reviews every submission." },
-    q6: { q: "Is my vote anonymous and secure?", a: "Yes. Votes are recorded on a blockchain ledger with end-to-end encryption, and your identity is never linked to your vote choice in the public record." }
+    q6: { q: "Is my vote anonymous and secure?", a: "Yes. Votes are recorded on a blockchain ledger with end-to-end encryption, and your identity is never linked to your vote choice in the public record." },
+    c1: { q: "How do I upload my nomination documents?", a: "Go to Campaign > Upload Docs from your dashboard and upload your nomination form, NID, photo, and other EC-required files. You can track each document's verification status from the Candidates page." },
+    c2: { q: "How do I publish a manifesto or campaign update?", a: "Go to Campaign Management from your dashboard. Use 'New Post' to share updates with voters in your constituency, and edit your full manifesto from the Manifesto section." },
+    c3: { q: "How can I see how many votes I've received?", a: "Once the Election Commission publishes results, your vote count will appear on your Campaign dashboard and the public Results page." },
+    a1: { q: "How do I approve or reject a candidate's nomination?", a: "Go to Candidate Management, review the uploaded documents for each candidate, and use the Approve or Reject action. This updates their document and nomination status immediately." },
+    a2: { q: "How do I publish election results?", a: "From the Admin Dashboard, use the 'Publish Results' button once vote counting is complete and verified. This makes results visible on the public Results page." },
+    a3: { q: "How do I export voter, candidate, or audit data?", a: "Use the Export CSV/PDF buttons available on the Candidates, Complaints, and Admin Dashboard pages to download reports for offline record-keeping." }
   },
   compare: {
     title: "Compare Candidates",
@@ -423,7 +472,8 @@ export const en = {
   idleTimeout: {
     title: "Still there?",
     desc: "You've been inactive for a while. You'll be logged out automatically to protect your account.",
-    stayLoggedIn: "Stay Logged In"
+    stayLoggedIn: "Stay Logged In",
+    autoLogoutIn: "Auto-logout in"
   },
   profilePage: {
     loginActivity: "Login Activity",

@@ -1,0 +1,40 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "D:\\PROJECTS\\voting\\ElectionGuard\\contracts\\ElectionGuard.sol": {
+      "lastModificationDate": 1784565844213,
+      "contentHash": "27c00c0c4c0cd2db6ede5456139dae62",
+      "sourceName": "contracts/ElectionGuard.sol",
+      "solcConfig": {
+        "version": "0.8.19",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.19"
+      ],
+      "artifacts": [
+        "ElectionGuard"
+      ]
+    }
+  }
+}

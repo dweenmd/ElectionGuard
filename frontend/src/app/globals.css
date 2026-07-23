@@ -237,6 +237,15 @@ html.a11y-scale-130 body { zoom: 1.3; }
   animation: expand-in 0.2s ease-out;
 }
 
+/* Simple opacity entrance for badges/inline text (hero pill, register/verify step transitions) */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
 /* Gentle entrance for lists/cards (feed posts, candidate cards, compare cards) */
 @keyframes rise-in {
   from { opacity: 0; transform: translateY(8px); }

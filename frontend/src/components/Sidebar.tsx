@@ -39,6 +39,7 @@ export default function Sidebar({ role: propRole }: { role?: "voter" | "candidat
 
   const adminLinks = [
     { name: t('common.dashboard'), icon: 'dashboard', path: '/admin' },
+    { name: t('common.electionControl'), icon: 'how_to_vote', path: '/admin/election-control' },
     { name: t('common.feed'), icon: 'newspaper', path: '/feed' },
     { name: t('common.candidates'), icon: 'group', path: '/admin/candidates' },
     { name: t('common.grievance'), icon: 'report', path: '/admin/grievances' },

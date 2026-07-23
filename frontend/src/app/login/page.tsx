@@ -29,6 +29,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (!validate()) return;
     if (role === "admin" || role === "voter" || role === "candidate") {
+      toast.success(t('login.successToast'));
       login(role);
     }
   };
@@ -68,19 +69,19 @@ export default function LoginPage() {
           <div className="flex p-1 bg-surface-container-low rounded-lg mb-8">
             <button
               onClick={() => setRole("voter")}
-              className={`flex-1 py-2 text-label-md font-bold rounded-md transition-colors ${role === "voter" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+              className={`flex-1 py-2 text-label-md font-bold rounded-lg transition-colors ${role === "voter" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
             >
               Voter
             </button>
             <button
               onClick={() => setRole("candidate")}
-              className={`flex-1 py-2 text-label-md font-bold rounded-md transition-colors ${role === "candidate" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+              className={`flex-1 py-2 text-label-md font-bold rounded-lg transition-colors ${role === "candidate" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
             >
               Candidate
             </button>
             <button
               onClick={() => setRole("admin")}
-              className={`flex-1 py-2 text-label-md font-bold rounded-md transition-colors ${role === "admin" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
+              className={`flex-1 py-2 text-label-md font-bold rounded-lg transition-colors ${role === "admin" ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"}`}
             >
               Admin
             </button>
@@ -91,7 +92,7 @@ export default function LoginPage() {
               <label htmlFor="nid" className="block text-label-md font-medium text-on-surface mb-2">
                 {t('login.nid')}
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="mt-1 relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <span className="material-symbols-outlined text-on-surface-variant text-xl">badge</span>
                 </div>
@@ -114,7 +115,7 @@ export default function LoginPage() {
               <label htmlFor="password" className="block text-label-md font-medium text-on-surface mb-2">
                 {t('login.password')}
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="mt-1 relative rounded-lg shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <span className="material-symbols-outlined text-on-surface-variant text-xl">lock</span>
                 </div>

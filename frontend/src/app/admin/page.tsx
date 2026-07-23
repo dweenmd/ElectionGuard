@@ -1,11 +1,38 @@
 "use client";
+import Link from "next/link";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
 import { useTranslation } from "@/context/UIContext";
-import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useAuditLog } from "@/context/AuditLogContext";
+import toast from "react-hot-toast";
+import { downloadCsv } from "@/lib/csvExport";
 
 export default function AdminDashboardPage() {
   const { t } = useTranslation();
+  const { isElectionStarted } = useAuth();
+  const { logAction, entries } = useAuditLog();
+
+  const handlePublishResults = () => {
+    // TODO(backend): এখানে আসল POST /api/results/publish কল হবে
+    logAction("Results Published", "Election results published to the public results page");
+    toast.success(t('admin.resultsPublished'));
+  };
+
+  const handleExportAuditLog = () => {
+    downloadCsv(
+      "audit-log.csv",
+      ["ID", "Actor", "Action", "Details", "Date"],
+      entries.map((e) => [e.id, e.actor, e.action, e.details, e.createdAt])
+    );
+    toast.success(t('admin.exportSuccess'));
+  };
+
+  const handleExportVoterListPdf = () => {
+    // TODO(backend): real PDF generation একটা backend endpoint / pdf library লাগবে; এখন honest হওয়ার জন্য
+    // fake success না দেখিয়ে "coming soon" জানানো হচ্ছে (forgot-password button-এর মতো pattern)
+    toast("PDF export will be available once the backend reporting service is integrated.", { icon: "🚧" });
+  };
   
   // State for Voter List tab
   const voters = [
@@ -30,6 +57,28 @@ export default function AdminDashboardPage() {
               {t('admin.subtitle')}
             </p>
           </div>
+
+          {/* Election status banner — actual start/stop control ekhon dedicated portal-e,
+              ekhane shudhu current status + quick link dekhano hocche */}
+          <Link
+            href="/admin/election-control"
+            className={`flex items-center justify-between gap-4 rounded-xl border-2 p-4 md:p-5 transition-colors hover:opacity-90 ${
+              isElectionStarted ? "bg-success/10 border-success/30" : "bg-surface-container-lowest border-outline-variant"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span className={`material-symbols-outlined text-2xl ${isElectionStarted ? "text-success" : "text-on-surface-variant"}`}>
+                {isElectionStarted ? "lock_open" : "lock"}
+              </span>
+              <div>
+                <p className={`text-label-md font-bold ${isElectionStarted ? "text-success" : "text-on-surface"}`}>
+                  {isElectionStarted ? t('electionControl.statusActive') : t('electionControl.statusInactive')}
+                </p>
+                <p className="text-caption text-on-surface-variant">{t('common.electionControl')}</p>
+              </div>
+            </div>
+            <span className="material-symbols-outlined text-on-surface-variant">chevron_right</span>
+          </Link>
 
           {/* 3 Main Stat Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -65,7 +114,7 @@ export default function AdminDashboardPage() {
                 <p className="text-body-md text-on-surface-variant mb-2">{t('admin.activeElections')}</p>
                 <h2 className="text-display-sm font-bold text-on-surface">3</h2>
               </div>
-              <button className="w-full bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container transition-colors py-2 rounded-lg text-label-md font-bold flex justify-center items-center gap-2">
+              <button onClick={handlePublishResults} className="w-full bg-secondary-container hover:bg-secondary-container/80 text-on-secondary-container transition-colors py-2 rounded-lg text-label-md font-bold flex justify-center items-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">publish</span>
                 {t('admin.publishResults')}
               </button>
@@ -152,11 +201,11 @@ export default function AdminDashboardPage() {
               </p>
               
               <div className="flex flex-col gap-3 mt-auto">
-                <button className="w-full flex items-center justify-between p-3 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors">
+                <button onClick={handleExportVoterListPdf} className="w-full flex items-center justify-between p-3 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors">
                   <span className="text-label-md font-bold text-on-surface">{t('admin.voterListPdf')}</span>
                   <span className="material-symbols-outlined text-on-surface-variant">picture_as_pdf</span>
                 </button>
-                <button className="w-full flex items-center justify-between p-3 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors">
+                <button onClick={handleExportAuditLog} className="w-full flex items-center justify-between p-3 border border-outline-variant rounded-lg hover:bg-surface-variant transition-colors">
                   <span className="text-label-md font-bold text-on-surface">{t('admin.auditLogCsv')}</span>
                   <span className="material-symbols-outlined text-on-surface-variant">csv</span>
                 </button>

@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 import Cookies from "js-cookie";
 import { useRouter, usePathname } from "next/navigation";
 import { recordLogin } from "@/lib/loginHistory";
+import { getElectionStatus, setElectionStatus, ELECTION_STATUS_EVENT } from "@/lib/electionStatus";
 
 type Role = "voter" | "candidate" | "admin" | null;
 
@@ -49,6 +50,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  // Election on/off status এখন localStorage-ভিত্তিক (আগে শুধু React state-এ ছিল, তাই admin
+  // চালু করলেও voter/candidate অন্য ট্যাবে বা refresh করার পর সেটা দেখতে পেত না)
+  useEffect(() => {
+    setIsElectionStarted(getElectionStatus());
+    const syncStatus = () => setIsElectionStarted(getElectionStatus());
+    window.addEventListener("storage", syncStatus);
+    window.addEventListener(ELECTION_STATUS_EVENT, syncStatus);
+    return () => {
+      window.removeEventListener("storage", syncStatus);
+      window.removeEventListener(ELECTION_STATUS_EVENT, syncStatus);
+    };
+  }, []);
+
   const login = (role: Exclude<Role, null>) => {
     // Mock login based on role
     // constituencyId/Name admin এর জন্য "ALL" (EC সব এলাকা oversee করে);
@@ -78,7 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleElection = () => {
-    setIsElectionStarted(prev => !prev);
+    setIsElectionStarted((prev) => {
+      const next = !prev;
+      setElectionStatus(next);
+      return next;
+    });
   };
 
   return (
