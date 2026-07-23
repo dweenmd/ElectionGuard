@@ -57,6 +57,7 @@ export default function RegisterPage() {
   // Biometric state
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [capturedFingerprintHash, setCapturedFingerprintHash] = useState<string | null>(null);
@@ -79,6 +80,16 @@ export default function RegisterPage() {
     setWebauthnSupported(browserSupportsWebAuthn());
   }, []);
 
+  // The <video> element only exists in the DOM once cameraActive is true
+  // (see the JSX below), so the stream has to be attached here, after that
+  // re-render, not inside startCamera() itself.
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch((e) => console.error("[ElectionGuard] video.play() failed:", e));
+    }
+  }, [cameraActive]);
+
   const IR_CAMERA_PATTERN = /ir\b|infrared|hello|depth/i;
 
   const startCamera = async (deviceId?: string) => {
@@ -97,10 +108,17 @@ export default function RegisterPage() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoInputs = devices.filter((d) => d.kind === "videoinput");
       setCameras(videoInputs);
+      // eslint-disable-next-line no-console
+      console.log(
+        "[ElectionGuard] detected cameras:",
+        videoInputs.map((d) => ({ deviceId: d.deviceId, label: d.label }))
+      );
 
       const activeTrack = stream.getVideoTracks()[0];
       const activeSettings = activeTrack?.getSettings();
       const activeLabel = activeTrack?.label || "";
+      // eslint-disable-next-line no-console
+      console.log("[ElectionGuard] active camera label:", activeLabel);
 
       if (!deviceId && videoInputs.length > 1 && IR_CAMERA_PATTERN.test(activeLabel)) {
         const betterCamera = videoInputs.find((d) => !IR_CAMERA_PATTERN.test(d.label));
@@ -111,10 +129,12 @@ export default function RegisterPage() {
         }
       }
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
+      // NOTE: the <video> element only mounts once cameraActive is true, so
+      // assigning srcObject here (before that re-render happens) would
+      // silently do nothing -- videoRef.current is still null at this point.
+      // We stash the stream and attach it in a useEffect below, after the
+      // element exists.
+      streamRef.current = stream;
       if (activeSettings?.deviceId) setSelectedCameraId(activeSettings.deviceId);
       setCameraActive(true);
       setIsFaceScanning(false);
@@ -140,14 +160,13 @@ export default function RegisterPage() {
 
   const switchCamera = () => {
     if (cameras.length < 2) return;
-    const stream = videoRef.current?.srcObject as MediaStream | null;
-    stream?.getTracks().forEach((t) => t.stop());
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
     setCameraActive(false);
     const idx = cameras.findIndex((c) => c.deviceId === selectedCameraId);
     const next = cameras[(idx + 1) % cameras.length];
     startCamera(next.deviceId);
   };
-
 
   const capturePhoto = () => {
     if (!(videoRef.current && canvasRef.current && cameraActive)) return;
@@ -161,10 +180,8 @@ export default function RegisterPage() {
       const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
       setCapturedPhoto(dataUrl);
 
-      const stream = video.srcObject as MediaStream;
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
       setCameraActive(false);
       setFaceDone(true);
       toast.success("লাইভ ফেস ফটো ক্যাপচার সফল! ডাটাবেসে সেভ হয়েছে।");
@@ -337,6 +354,20 @@ export default function RegisterPage() {
 
                   {cameraError && !faceDone && (
                     <p className="text-caption text-error bg-error-container/20 border border-error/30 rounded-lg px-2 py-1">{cameraError}</p>
+                  )}
+
+                  {cameras.length > 1 && !faceDone && (
+                    <select
+                      value={selectedCameraId}
+                      onChange={(e) => startCamera(e.target.value)}
+                      className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg py-1.5 px-2 text-caption text-on-surface"
+                    >
+                      {cameras.map((c, i) => (
+                        <option key={c.deviceId} value={c.deviceId}>
+                          {c.label || `Camera ${i + 1}`}
+                        </option>
+                      ))}
+                    </select>
                   )}
 
                   {!cameraActive && !faceDone ? (
