@@ -68,19 +68,54 @@ export default function RegisterPage() {
   const [isFingerprintScanning, setIsFingerprintScanning] = useState(false);
   const [webauthnSupported, setWebauthnSupported] = useState(true);
 
+  // Some laptops (Windows Hello) have a second, infrared-only camera used
+  // for face login. It always looks black under normal light. We keep the
+  // list of cameras around so we can auto-avoid it and let the user
+  // manually switch if we guess wrong.
+  const [cameras, setCameras] = useState<MediaDeviceInfo[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string>("");
+
   useEffect(() => {
     setWebauthnSupported(browserSupportsWebAuthn());
   }, []);
 
-  const startCamera = async () => {
+  const IR_CAMERA_PATTERN = /ir\b|infrared|hello|depth/i;
+
+  const startCamera = async (deviceId?: string) => {
     setCameraError(null);
     try {
       setIsFaceScanning(true);
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320, facingMode: "user" } });
+      const constraints: MediaStreamConstraints = {
+        video: deviceId
+          ? { deviceId: { exact: deviceId }, width: 320, height: 320 }
+          : { width: 320, height: 320, facingMode: "user" },
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+      // Labels are only readable after permission is granted -- use this
+      // first successful call to discover all cameras and skip the IR one.
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoInputs = devices.filter((d) => d.kind === "videoinput");
+      setCameras(videoInputs);
+
+      const activeTrack = stream.getVideoTracks()[0];
+      const activeSettings = activeTrack?.getSettings();
+      const activeLabel = activeTrack?.label || "";
+
+      if (!deviceId && videoInputs.length > 1 && IR_CAMERA_PATTERN.test(activeLabel)) {
+        const betterCamera = videoInputs.find((d) => !IR_CAMERA_PATTERN.test(d.label));
+        if (betterCamera && betterCamera.deviceId !== activeSettings?.deviceId) {
+          stream.getTracks().forEach((t) => t.stop());
+          await startCamera(betterCamera.deviceId);
+          return;
+        }
+      }
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
       }
+      if (activeSettings?.deviceId) setSelectedCameraId(activeSettings.deviceId);
       setCameraActive(true);
       setIsFaceScanning(false);
       toast.success("ক্যামেরা অন হয়েছে। সোজা তাকান এবং ক্যাপচার বাটন চাপুন।");
@@ -102,6 +137,17 @@ export default function RegisterPage() {
       toast.error("ক্যামেরা চালু করা যায়নি।");
     }
   };
+
+  const switchCamera = () => {
+    if (cameras.length < 2) return;
+    const stream = videoRef.current?.srcObject as MediaStream | null;
+    stream?.getTracks().forEach((t) => t.stop());
+    setCameraActive(false);
+    const idx = cameras.findIndex((c) => c.deviceId === selectedCameraId);
+    const next = cameras[(idx + 1) % cameras.length];
+    startCamera(next.deviceId);
+  };
+
 
   const capturePhoto = () => {
     if (!(videoRef.current && canvasRef.current && cameraActive)) return;
@@ -295,7 +341,7 @@ export default function RegisterPage() {
 
                   {!cameraActive && !faceDone ? (
                     <button
-                      onClick={startCamera}
+                      onClick={() => startCamera()}
                       disabled={isFaceScanning}
                       className="w-full py-2 bg-primary text-on-primary rounded-lg font-bold text-caption flex items-center justify-center gap-2 hover:bg-primary/90 transition-all shadow-sm disabled:opacity-60"
                     >
@@ -303,13 +349,24 @@ export default function RegisterPage() {
                       {isFaceScanning ? "ক্যামেরা চালু হচ্ছে..." : cameraError ? "আবার চেষ্টা করুন" : "ক্যামেরা অন করুন"}
                     </button>
                   ) : cameraActive && !faceDone ? (
-                    <button
-                      onClick={capturePhoto}
-                      className="w-full py-2 bg-success text-on-success rounded-lg font-bold text-caption flex items-center justify-center gap-2 hover:bg-success/90 transition-all shadow-sm animate-pulse"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">center_focus_strong</span>
-                      ফটো ক্যাপচার করুন
-                    </button>
+                    <div className="w-full flex flex-col gap-2">
+                      <button
+                        onClick={capturePhoto}
+                        className="w-full py-2 bg-success text-on-success rounded-lg font-bold text-caption flex items-center justify-center gap-2 hover:bg-success/90 transition-all shadow-sm animate-pulse"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">center_focus_strong</span>
+                        ফটো ক্যাপচার করুন
+                      </button>
+                      {cameras.length > 1 && (
+                        <button
+                          onClick={switchCamera}
+                          className="w-full py-1.5 border border-outline text-on-surface-variant rounded-lg font-medium text-caption flex items-center justify-center gap-2 hover:bg-surface-variant transition-all"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">cameraswitch</span>
+                          প্রিভিউ কালো দেখাচ্ছে? অন্য ক্যামেরা ব্যবহার করুন
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="w-full py-2 bg-success/20 text-success border border-success/30 rounded-lg font-bold text-caption flex items-center justify-center gap-1">
                       <span className="material-symbols-outlined text-[18px]">check_circle</span>
