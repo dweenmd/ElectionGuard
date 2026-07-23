@@ -1,8 +1,9 @@
 {
-  "name": "gonovote-dapp",
+  "name": "ElectionGuard-dapp",
   "version": "1.0.0",
   "description": "Blockchain-based voting system (final year project) - Solidity + Hardhat",
   "scripts": {
+    "run": "node runner.js",
     "compile": "hardhat compile",
     "test": "hardhat test",
     "node": "hardhat node",

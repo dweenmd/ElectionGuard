@@ -5,7 +5,12 @@
             "name": "Run ElectionGuard",
             "type": "node",
             "request": "launch",
-            "program": "${workspaceFolder}/runner.js",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "run"
+            ],
+            "cwd": "${workspaceFolder}",
             "console": "integratedTerminal"
         }
     ]
