@@ -2,33 +2,11 @@ import { Router } from "express";
 import type { Response } from "express";
 import type { AuthRequest } from "../middleware/auth.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { readJson, writeJson } from "../config/db.js";
+import { prisma } from "../lib/prisma.js";
 
 const router = Router();
 
-interface Grievance {
-  id: string;
-  voterId: string;
-  voterName: string;
-  category: string;
-  description: string;
-  status: string;
-  createdAt: string;
-}
-
-const defaultGrievances: Grievance[] = [
-  {
-    id: "GRV-001",
-    voterId: "V789",
-    voterName: "Rahim Uddin",
-    category: "Polling Center Issue",
-    description: "Long queue at Dhaka-10 center",
-    status: "open",
-    createdAt: "2026-08-15T09:30:00Z",
-  },
-];
-
-router.get(["/", "/grievances"], requireAuth, (req: AuthRequest, res: Response) => {
+router.get(["/", "/grievances"], requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user;
     if (!user) {
@@ -36,20 +14,18 @@ router.get(["/", "/grievances"], requireAuth, (req: AuthRequest, res: Response) 
       return;
     }
 
-    const grievances = readJson<Grievance[]>("grievances.json", defaultGrievances);
+    const grievances = await prisma.grievance.findMany({
+      where: user.role === "admin" ? {} : { voterId: user.userId },
+      orderBy: { createdAt: "desc" },
+    });
 
-    const result =
-      user.role === "admin"
-        ? grievances
-        : grievances.filter((g) => g.voterId === user.userId);
-
-    res.json({ grievances: result });
+    res.json({ grievances });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to fetch grievances" });
   }
 });
 
-router.post(["/", "/grievances"], requireAuth, (req: AuthRequest, res: Response) => {
+router.post(["/", "/grievances"], requireAuth, async (req: AuthRequest, res: Response) => {
   try {
     const user = req.user;
     if (!user) {
@@ -63,19 +39,16 @@ router.post(["/", "/grievances"], requireAuth, (req: AuthRequest, res: Response)
       return;
     }
 
-    const newGrievance: Grievance = {
-      id: "GRV-" + Date.now(),
-      voterId: user.userId,
-      voterName: user.name,
-      category,
-      description,
-      status: "open",
-      createdAt: new Date().toISOString(),
-    };
-
-    const grievances = readJson<Grievance[]>("grievances.json", defaultGrievances);
-    grievances.unshift(newGrievance);
-    writeJson("grievances.json", grievances);
+    const newGrievance = await prisma.grievance.create({
+      data: {
+        id: "GRV-" + Date.now(),
+        voterId: user.userId,
+        voterName: user.name,
+        category,
+        description,
+        status: "open",
+      },
+    });
 
     res.json({ success: true, grievance: newGrievance });
   } catch (err: any) {
@@ -83,7 +56,7 @@ router.post(["/", "/grievances"], requireAuth, (req: AuthRequest, res: Response)
   }
 });
 
-router.patch(["/:id", "/grievances/:id"], requireAuth, requireRole("admin"), (req: AuthRequest, res: Response) => {
+router.patch(["/:id", "/grievances/:id"], requireAuth, requireRole("admin"), async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -93,16 +66,13 @@ router.patch(["/:id", "/grievances/:id"], requireAuth, requireRole("admin"), (re
       return;
     }
 
-    const grievances = readJson<Grievance[]>("grievances.json", defaultGrievances);
-    const grievance = grievances.find((g) => g.id === id);
-
-    if (!grievance) {
+    const existing = await prisma.grievance.findUnique({ where: { id } });
+    if (!existing) {
       res.status(404).json({ error: "Grievance not found" });
       return;
     }
 
-    grievance.status = status;
-    writeJson("grievances.json", grievances);
+    const grievance = await prisma.grievance.update({ where: { id }, data: { status } });
 
     res.json({ success: true, grievance });
   } catch (err: any) {

@@ -1,0 +1,138 @@
+// ElectionGuard database schema
+// PostgreSQL + Prisma. Replaces the old fs-based JSON "database" in src/config/db.ts.
+//
+// Security notes:
+// - Voter NID is never stored in plaintext searchable form. We store:
+//     nidHash        -> HMAC-SHA256(NID) using HMAC_KEY, used for O(1) unique lookups
+//     nidEncrypted    -> AES-256-GCM ciphertext of the real NID (decrypt only when legally required)
+// - faceDescriptor / fingerprintHash are biometric-adjacent metadata and are also
+//   AES-256-GCM encrypted at rest (see src/lib/crypto.ts).
+// - All queries go through Prisma's parameterized query builder, so SQL injection
+//   is not possible via these models.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  voter
+  candidate
+  admin
+}
+
+model User {
+  id                       String   @id
+  nidHash                  String   @unique
+  nidEncrypted             String
+  name                     String
+  role                     Role     @default(voter)
+  party                    String?
+  constituencyId           String
+  constituencyName         String
+  faceDescriptorEncrypted  String?
+  fingerprintHashEncrypted String?
+  createdAt                DateTime @default(now())
+
+  @@index([role])
+}
+
+model CandidateMeta {
+  id               Int     @id
+  icon             String?
+  manifesto        String?
+  constituencyName String?
+  extra            Json?
+}
+
+model VoteRecord {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  candidateId Int
+  txHash      String
+  timestamp   DateTime @default(now())
+
+  @@index([candidateId])
+}
+
+model FeedPost {
+  id              String   @id
+  type            String
+  author          String
+  content         String
+  constituencyId  String
+  likes           Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@index([constituencyId])
+}
+
+model Grievance {
+  id          String   @id
+  voterId     String
+  voterName   String
+  category    String
+  description String
+  status      String   @default("open")
+  createdAt   DateTime @default(now())
+
+  @@index([voterId])
+}
+
+model PollingCenter {
+  id                String @id
+  name              String
+  address           String
+  constituencyId    String
+  constituencyName  String
+  lat               Float
+  lng               Float
+  capacity          Int
+  status            String @default("active")
+
+  @@index([constituencyId])
+}
+
+model TurnoutConstituency {
+  constituencyId   String @id
+  constituencyName String
+  registered       Int
+  voted            Int
+}
+
+// Tamper-evident, hash-chained audit log. Each row's `hash` commits to the
+// previous row's hash + this row's own fields, so any historical edit to a
+// row (e.g. by a rogue DB admin) breaks the chain and is detectable by
+// re-computing hashes with verifyAuditChain(). The latest hash can optionally
+// be anchored on-chain periodically for external tamper-proofing.
+model AuditLog {
+  id        String   @id
+  actor     String
+  action    String
+  details   String
+  prevHash  String
+  hash      String
+  createdAt DateTime @default(now())
+}
+
+model ElectionStatus {
+  id         Int    @id @default(1)
+  status     String
+  stateIndex Int
+}
+
+model WebauthnCredential {
+  id           String   @id @default(cuid())
+  nidHash      String
+  credentialID String   @unique
+  publicKey    String
+  counter      Int      @default(0)
+  transports   String[]
+  createdAt    DateTime @default(now())
+
+  @@index([nidHash])
+}

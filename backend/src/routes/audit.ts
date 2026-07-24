@@ -1,22 +1,15 @@
 import { Router } from "express";
-import { readJson, writeJson } from "../config/db.js";
-import { requireAuth } from "../middleware/auth.js";
+import { prisma } from "../lib/prisma.js";
+import { appendAuditLog, verifyAuditChain } from "../lib/auditChain.js";
+import { requireAuth, requireRole } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
 
-interface AuditEntry {
-  id: string;
-  actor: string;
-  action: string;
-  details: string;
-  createdAt: string;
-}
-
 // GET /api/audit-logs
-router.get("/", requireAuth, (req: AuthRequest, res) => {
+router.get("/", requireAuth, async (req: AuthRequest, res) => {
   try {
-    const entries = readJson<AuditEntry[]>("audit.json", []);
+    const entries = await prisma.auditLog.findMany({ orderBy: { createdAt: "desc" }, take: 500 });
     res.json({ entries });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to fetch audit logs" });
@@ -24,7 +17,7 @@ router.get("/", requireAuth, (req: AuthRequest, res) => {
 });
 
 // POST /api/audit-logs
-router.post("/", requireAuth, (req: AuthRequest, res) => {
+router.post("/", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { action, details } = req.body as { action?: string; details?: string };
     if (!action) {
@@ -32,22 +25,21 @@ router.post("/", requireAuth, (req: AuthRequest, res) => {
       return;
     }
 
-    const entry: AuditEntry = {
-      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      actor: req.user?.name || "Unknown",
-      action,
-      details: details || "",
-      createdAt: new Date().toISOString(),
-    };
-
-    const existing = readJson<AuditEntry[]>("audit.json", []);
-    existing.unshift(entry);
-    // Keep max 500 entries
-    writeJson("audit.json", existing.slice(0, 500));
+    const entry = await appendAuditLog(req.user?.name || "Unknown", action, details || "");
 
     res.json({ success: true, entry });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to log action" });
+  }
+});
+
+// GET /api/audit-logs/verify - admin-only tamper check of the hash chain
+router.get("/verify", requireAuth, requireRole("admin"), async (_req: AuthRequest, res) => {
+  try {
+    const result = await verifyAuditChain();
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to verify audit chain" });
   }
 });
 

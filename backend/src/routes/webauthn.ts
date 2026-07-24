@@ -11,28 +11,20 @@ import type {
   AuthenticationResponseJSON,
   AuthenticatorTransportFuture,
 } from "@simplewebauthn/server";
-import { readJson, writeJson } from "../config/db.js";
+import { prisma } from "../lib/prisma.js";
+import { hmacIndex } from "../lib/crypto.js";
 import { RP_NAME, RP_ID, ORIGIN } from "../config/webauthn.js";
 
 const router = Router();
 
-interface StoredCredential {
-  nid: string;
-  credentialID: string; // base64url string
-  publicKey: string; // base64 encoded public key bytes
-  counter: number;
-  transports?: AuthenticatorTransportFuture[];
-  createdAt: string;
-}
-
-const CREDS_FILE = "webauthn-credentials.json";
-
 // Pending challenges, keyed by NID. In-memory is fine for a single-process
-// demo server; for a multi-instance deployment this should live in Redis/DB.
+// demo server; for a multi-instance deployment this should live in Redis
+// (shared, TTL-based expiry, survives restarts) instead.
 const challengeStore = new Map<string, string>();
 
-function getCredentialsForNid(nid: string): StoredCredential[] {
-  return readJson<StoredCredential[]>(CREDS_FILE, []).filter((c) => c.nid === nid);
+async function getCredentialsForNid(nid: string) {
+  const nidHash = hmacIndex(nid);
+  return prisma.webauthnCredential.findMany({ where: { nidHash } });
 }
 
 /**
@@ -47,7 +39,7 @@ router.post("/register-options", async (req: Request, res: Response) => {
       return;
     }
 
-    const existingCreds = getCredentialsForNid(nid);
+    const existingCreds = await getCredentialsForNid(nid);
 
     const options = await generateRegistrationOptions({
       rpName: RP_NAME,
@@ -56,15 +48,13 @@ router.post("/register-options", async (req: Request, res: Response) => {
       userDisplayName: name || nid,
       attestationType: "none",
       authenticatorSelection: {
-        // "platform" = the device's own sensor (fingerprint reader, Face ID,
-        // Windows Hello) rather than a roaming USB security key.
         authenticatorAttachment: "platform",
         userVerification: "required",
         residentKey: "preferred",
       },
       excludeCredentials: existingCreds.map((c) => ({
         id: c.credentialID,
-        transports: c.transports,
+        transports: c.transports as AuthenticatorTransportFuture[],
       })),
     });
 
@@ -107,16 +97,15 @@ router.post("/register-verify", async (req: Request, res: Response) => {
 
     const { credential: cred } = verification.registrationInfo;
 
-    const all = readJson<StoredCredential[]>(CREDS_FILE, []);
-    all.unshift({
-      nid,
-      credentialID: cred.id,
-      publicKey: Buffer.from(cred.publicKey).toString("base64"),
-      counter: cred.counter,
-      transports: cred.transports,
-      createdAt: new Date().toISOString(),
+    await prisma.webauthnCredential.create({
+      data: {
+        nidHash: hmacIndex(nid),
+        credentialID: cred.id,
+        publicKey: Buffer.from(cred.publicKey).toString("base64"),
+        counter: cred.counter,
+        transports: cred.transports ?? [],
+      },
     });
-    writeJson(CREDS_FILE, all);
 
     challengeStore.delete(nid);
     res.json({ verified: true, credentialId: cred.id });
@@ -137,7 +126,7 @@ router.post("/login-options", async (req: Request, res: Response) => {
       return;
     }
 
-    const existingCreds = getCredentialsForNid(nid);
+    const existingCreds = await getCredentialsForNid(nid);
     if (existingCreds.length === 0) {
       res.status(404).json({ error: "এই NID এর জন্য কোনো বায়োমেট্রিক ডিভাইস নিবন্ধিত নেই।" });
       return;
@@ -148,7 +137,7 @@ router.post("/login-options", async (req: Request, res: Response) => {
       userVerification: "required",
       allowCredentials: existingCreds.map((c) => ({
         id: c.credentialID,
-        transports: c.transports,
+        transports: c.transports as AuthenticatorTransportFuture[],
       })),
     });
 
@@ -173,9 +162,8 @@ router.post("/login-verify", async (req: Request, res: Response) => {
       return;
     }
 
-    const all = readJson<StoredCredential[]>(CREDS_FILE, []);
-    const stored = all.find((c) => c.nid === nid && c.credentialID === credential.id);
-    if (!stored) {
+    const stored = await prisma.webauthnCredential.findUnique({ where: { credentialID: credential.id } });
+    if (!stored || stored.nidHash !== hmacIndex(nid)) {
       res.status(400).json({ error: "এই NID এর জন্য অজানা ক্রিডেনশিয়াল।" });
       return;
     }
@@ -189,7 +177,7 @@ router.post("/login-verify", async (req: Request, res: Response) => {
         id: stored.credentialID,
         publicKey: new Uint8Array(Buffer.from(stored.publicKey, "base64")),
         counter: stored.counter,
-        transports: stored.transports,
+        transports: stored.transports as AuthenticatorTransportFuture[],
       },
     });
 
@@ -198,8 +186,10 @@ router.post("/login-verify", async (req: Request, res: Response) => {
       return;
     }
 
-    stored.counter = verification.authenticationInfo.newCounter;
-    writeJson(CREDS_FILE, all);
+    await prisma.webauthnCredential.update({
+      where: { credentialID: stored.credentialID },
+      data: { counter: verification.authenticationInfo.newCounter },
+    });
 
     challengeStore.delete(nid);
     res.json({ verified: true });

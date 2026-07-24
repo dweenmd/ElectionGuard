@@ -1,16 +1,19 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { contract, contractReadOnly, getElectionStateName } from "../config/contract.js";
-import { readJson, writeJson } from "../config/db.js";
+import { prisma } from "../lib/prisma.js";
+import { appendAuditLog } from "../lib/auditChain.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
 
-const STATUS_FILE = "election-status.json";
-interface ElectionStatusFile {
-  status: string;
-  stateIndex: number;
+async function getStatusRow() {
+  return prisma.electionStatus.upsert({
+    where: { id: 1 },
+    update: {},
+    create: { id: 1, status: "NotStarted", stateIndex: 0 },
+  });
 }
 
 router.get("/config", async (_req: Request, res: Response) => {
@@ -39,18 +42,16 @@ router.get("/status", async (_req: Request, res: Response) => {
     const stateIndex = Number(state);
     const status = getElectionStateName(stateIndex);
 
-    writeJson<ElectionStatusFile>(STATUS_FILE, { status, stateIndex });
+    await prisma.electionStatus.upsert({
+      where: { id: 1 },
+      update: { status, stateIndex },
+      create: { id: 1, status, stateIndex },
+    });
 
-    res.json({
-      status,
-      stateIndex,
-    });
+    res.json({ status, stateIndex });
   } catch (_err) {
-    const fallback = readJson<ElectionStatusFile>(STATUS_FILE, {
-      status: "Ongoing",
-      stateIndex: 1,
-    });
-    res.json(fallback);
+    const fallback = await getStatusRow();
+    res.json({ status: fallback.status, stateIndex: fallback.stateIndex });
   }
 });
 
@@ -83,14 +84,19 @@ router.post(
 
       const newStatus = action === "start" ? "Ongoing" : "Ended";
       const newStateIndex = action === "start" ? 1 : 2;
-      writeJson<ElectionStatusFile>(STATUS_FILE, { status: newStatus, stateIndex: newStateIndex });
-
-      res.json({
-        success: true,
-        action,
-        status: newStatus,
-        txHash,
+      await prisma.electionStatus.upsert({
+        where: { id: 1 },
+        update: { status: newStatus, stateIndex: newStateIndex },
+        create: { id: 1, status: newStatus, stateIndex: newStateIndex },
       });
+
+      await appendAuditLog(
+        req.user?.name || "Election Officer",
+        action === "start" ? "Election Started" : "Election Stopped",
+        action === "start" ? "Voting was opened platform-wide" : "Voting was closed platform-wide"
+      );
+
+      res.json({ success: true, action, status: newStatus, txHash });
     } catch (err: any) {
       res.status(400).json({ error: err.message || "Failed to update election status" });
     }

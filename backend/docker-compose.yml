@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: electionguard-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: electionguard
+      POSTGRES_PASSWORD: electionguard
+      POSTGRES_DB: electionguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - electionguard_pgdata:/var/lib/postgresql/data
+
+volumes:
+  electionguard_pgdata:

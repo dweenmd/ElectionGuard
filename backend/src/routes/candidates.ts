@@ -1,19 +1,11 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import { contract, contractReadOnly } from "../config/contract.js";
-import { readJson } from "../config/db.js";
+import { prisma } from "../lib/prisma.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import type { AuthRequest } from "../middleware/auth.js";
 
 const router = Router();
-
-interface CandidateMeta {
-  id: number;
-  icon?: string;
-  manifesto?: string;
-  constituencyName?: string;
-  [key: string]: any;
-}
 
 const DEFAULT_CANDIDATES = [
   { id: 1, name: "Dr. Shafiqur Rahman", party: "Green Wave Party", voteCount: 54200, manifesto: "Eco-friendly policies and clean energy transitions.", constituencyName: "Dhaka-10" },
@@ -30,8 +22,7 @@ router.get("/", async (_req: Request, res: Response) => {
       // Contract call failed, fallback
     }
 
-    const voteRecords = readJson<any[]>("vote-records.json", []);
-    const metaList = readJson<CandidateMeta[]>("candidates-meta.json", []);
+    const metaList = await prisma.candidateMeta.findMany();
 
     const baseList = rawCandidates && rawCandidates.length > 0
       ? rawCandidates.map((c: any) => ({
@@ -42,15 +33,19 @@ router.get("/", async (_req: Request, res: Response) => {
         }))
       : DEFAULT_CANDIDATES;
 
-    const candidates = baseList.map((c) => {
-      const votesFromDb = voteRecords.filter((r) => Number(r.candidateId) === Number(c.id)).length;
-      const meta = metaList.find((m) => Number(m.id) === Number(c.id));
-      return {
-        ...c,
-        voteCount: c.voteCount + votesFromDb,
-        ...(meta || {}),
-      };
-    });
+    const candidates = await Promise.all(
+      baseList.map(async (c) => {
+        const votesFromDb = await prisma.voteRecord.count({ where: { candidateId: c.id } });
+        const meta = metaList.find((m) => m.id === c.id);
+        return {
+          ...c,
+          voteCount: c.voteCount + votesFromDb,
+          ...(meta
+            ? { icon: meta.icon ?? undefined, manifesto: meta.manifesto ?? (c as any).manifesto, constituencyName: meta.constituencyName ?? (c as any).constituencyName, ...(typeof meta.extra === "object" && meta.extra ? meta.extra : {}) }
+            : {}),
+        };
+      })
+    );
 
     res.json({ candidates });
   } catch (err: any) {
@@ -73,9 +68,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       // Fallback
     }
 
-    const voteRecords = readJson<any[]>("vote-records.json", []);
-    const metaList = readJson<CandidateMeta[]>("candidates-meta.json", []);
-    const meta = metaList.find((m) => Number(m.id) === candidateId);
+    const meta = await prisma.candidateMeta.findUnique({ where: { id: candidateId } });
 
     const baseCandidate = c
       ? {
@@ -91,12 +84,14 @@ router.get("/:id", async (req: Request, res: Response) => {
           voteCount: 0,
         };
 
-    const votesFromDb = voteRecords.filter((r) => Number(r.candidateId) === candidateId).length;
+    const votesFromDb = await prisma.voteRecord.count({ where: { candidateId } });
 
     const candidate = {
       ...baseCandidate,
       voteCount: baseCandidate.voteCount + votesFromDb,
-      ...(meta || {}),
+      ...(meta
+        ? { icon: meta.icon ?? undefined, manifesto: meta.manifesto ?? (baseCandidate as any).manifesto, constituencyName: meta.constituencyName ?? (baseCandidate as any).constituencyName, ...(typeof meta.extra === "object" && meta.extra ? meta.extra : {}) }
+        : {}),
     };
 
     res.json({ candidate });

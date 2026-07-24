@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 
 // Route imports
@@ -16,15 +18,35 @@ import auditRoutes from "./routes/audit.js";
 
 dotenv.config();
 
+// Fail fast if the secrets required for real DB security are missing,
+// instead of silently falling back to something insecure.
+for (const required of ["DATABASE_URL", "ENCRYPTION_KEY", "HMAC_KEY", "JWT_SECRET"]) {
+  if (!process.env[required]) {
+    console.warn(`⚠️  ${required} is not set in .env — see .env.example`);
+  }
+}
+
 const app = express();
 const PORT = process.env["PORT"] || 5000;
 
 // Middleware
+app.use(helmet());
 app.use(cors({
   origin: ["http://localhost:3000", "http://127.0.0.1:3000"],
   credentials: true,
 }));
 app.use(express.json());
+
+// Baseline anti-abuse limit across the whole API; individual routes (login,
+// register, vote) layer on stricter limits on top of this.
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
 
 // Health check
 app.get("/api/health", (_req, res) => {
